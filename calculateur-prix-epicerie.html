@@ -608,6 +608,7 @@ const DATA = [
   {cat:"Viandes", name:"Steak (faux-filet / T-bone)", low:30, high:40, deal:26},
   {cat:"Viandes", name:"Bavette de bœuf", low:22, high:32, deal:18},
   {cat:"Viandes", name:"Rôti de palette / croisé", low:12, high:16, deal:10},
+  {cat:"Viandes", name:"Bacon", low:10, high:16, deal:9},
   {cat:"Viandes", name:"Côtelettes de porc", low:10, high:14, deal:9},
   {cat:"Viandes", name:"Côtes levées / côtes de porc (dos)", low:9, high:14, deal:8},
   {cat:"Viandes", name:"Filet de porc", low:13, high:17, deal:11},
@@ -616,6 +617,8 @@ const DATA = [
   {cat:"Viandes", name:"Poisson blanc congelé (tilapia/sole)", low:15, high:20, deal:13},
   {cat:"Viandes", name:"Saumon (filet frais)", low:25, high:35, deal:20},
   {cat:"Viandes", name:"Crevettes congelées cuites", low:20, high:28, deal:16},
+  {cat:"Viandes", name:"Saucisses (hot-dog/déjeuner)", low:8, high:13, deal:6},
+  {cat:"Viandes", name:"Dinde (poitrine ou entière)", low:9, high:14, deal:7},
   {cat:"Légumes & fruits", name:"Pommes", low:3, high:4, deal:2},
   {cat:"Légumes & fruits", name:"Bananes", low:1.5, high:1.8, deal:1.1},
   {cat:"Légumes & fruits", name:"Raisins", low:5, high:7, deal:4},
@@ -632,12 +635,23 @@ const DATA = [
   {cat:"Laitiers & œufs", name:"Œufs, gros (douzaine)", low:4, high:5.5, deal:3.5, unit:"egg", costco:{price:5, note:"Kirkland poules en liberté, 24 unités à 9,99$"}},
   {cat:"Laitiers & œufs", name:"Fromage cheddar", low:12, high:16, deal:9, costco:{price:13.9, note:"bloc 1,15 kg, Kirkland"}},
   {cat:"Laitiers & œufs", name:"Beurre (au kg)", low:13, high:16.5, deal:10, costco:{price:19.8, note:"bio non salé 454g — c'est la seule version qu'on a dans nos données de prix pour l'instant, le beurre régulier est bel et bien en stock chez Costco mais son prix n'est pas encore suivi"}},
+  {cat:"Laitiers & œufs", name:"Lait 2 % (au litre)", low:1.3, high:1.9, deal:1, unit:"L"},
+  {cat:"Laitiers & œufs", name:"Yogourt (au kg)", low:6, high:9, deal:4.5},
   {cat:"Épicerie", name:"Café moulu", low:14, high:18, deal:9.5, costco:{price:15.4, note:"format ~1,36 kg, Kirkland colombien"}},
   {cat:"Épicerie", name:"Pâtes", low:3, high:4.5, deal:1.8, costco:{price:2.9, note:"Le Registre, 21 juil. 2026"}},
   {cat:"Épicerie", name:"Riz", low:2.5, high:3.5, deal:1.8},
   {cat:"Épicerie", name:"Huile d'olive (au litre)", low:12, high:16, deal:8, costco:{price:9.3, note:"Le Registre, 21 juil. 2026"}},
   {cat:"Épicerie", name:"Beurre d'arachide, marque maison", low:4.5, high:5, deal:3.25},
   {cat:"Épicerie", name:"Beurre d'arachide, marque nationale", low:6.5, high:8.5, deal:5},
+  {cat:"Épicerie", name:"Pain tranché (format régulier)", low:2.5, high:4.5, deal:2, unit:"un"},
+  {cat:"Épicerie", name:"Farine tout usage (au kg)", low:1.5, high:2.5, deal:1},
+  {cat:"Épicerie", name:"Sucre blanc (au kg)", low:1.3, high:2, deal:1},
+  {cat:"Épicerie", name:"Céréales déjeuner (au kg)", low:8, high:14, deal:6},
+  {cat:"Épicerie", name:"Craquelins (au kg)", low:8, high:14, deal:6},
+  {cat:"Épicerie", name:"Biscuits (au kg)", low:8, high:16, deal:6},
+  {cat:"Épicerie", name:"Jus (au litre)", low:2, high:3.5, deal:1.5, unit:"L"},
+  {cat:"Épicerie", name:"Ketchup, moutarde ou mayonnaise", low:2, high:4, deal:1.5, unit:"un"},
+  {cat:"Épicerie", name:"Thé (boîte ~100 sachets)", low:4, high:8, deal:3, unit:"un"},
   {cat:"Pharmacie", name:"Acétaminophène extra fort (100 comprimés)", low:8, high:18, deal:7, unit:"un", costco:{price:18.29, note:"marque Tylenol, well.ca — la version marque maison est généralement au bas de la fourchette"}},
   {cat:"Pharmacie", name:"Ibuprofène 200mg (100 comprimés)", low:10, high:22, deal:9, unit:"un", costco:{price:21.99, note:"marque Advil, well.ca — la version marque maison est généralement au bas de la fourchette"}},
   {cat:"Pharmacie", name:"Dentifrice (tube ~130-150ml)", low:3, high:6, deal:2.25, unit:"un"},
@@ -764,7 +778,7 @@ function renderResults(filter){
   }
 
   if(matches.length === 0){
-    resultsBox.innerHTML = `<div class="empty">Aucun produit trouvé — essaie "Produit personnalisé".</div>`;
+    resultsBox.innerHTML = `<div class="empty">Pas de repère de prix pour ce mot — regarde quand même la liste "Prix trouvés" plus bas, ou essaie "Produit personnalisé".</div>`;
     resultsBox.classList.add('open');
     return;
   }
