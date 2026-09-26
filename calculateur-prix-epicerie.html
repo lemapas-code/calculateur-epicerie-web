@@ -762,7 +762,12 @@ function findKnownPrices(name, limit){
   // parenthèses, etc. (ex: "Œufs, gros (douzaine)" -> "oeufs", pas "oeufs,")
   const firstWord = q.split(/[^a-z0-9]+/).filter(Boolean)[0];
   if(!firstWord) return [];
-  const matches = costcoCSV.filter(d => normalize(d.name).includes(firstWord));
+  // Frontière de mot obligatoire (\b) + "s" final optionnel pour le singulier/
+  // pluriel — évite les faux positifs du genre "hauts" qui matchait n'importe
+  // où dans "Artichauts" avec un simple .includes().
+  const stem = firstWord.replace(/s$/, '');
+  const wordRe = new RegExp('\\b' + stem + 's?\\b');
+  const matches = costcoCSV.filter(d => wordRe.test(normalize(d.name)));
   return [...matches].sort((a, b) => a.price - b.price).slice(0, limit || 5);
 }
 
