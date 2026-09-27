@@ -345,7 +345,7 @@
     white-space:nowrap;
     flex-shrink:0;
   }
-  .title-row{display:flex;align-items:center;gap:10px;}
+  .title-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
   .help-btn{
     width:26px;height:26px;border-radius:50%;border:1.3px solid var(--forest);
     background:#fff;color:var(--forest);font-weight:800;font-size:14px;
@@ -406,6 +406,28 @@
     color:var(--ink-soft);
   }
   .help-close:hover{color:var(--rust);}
+  .suggest-intro{
+    font-size:13px;color:var(--ink-soft);margin:0 0 12px;line-height:1.4;
+  }
+  .suggest-input, .suggest-textarea{
+    width:100%;font-family:'Archivo',sans-serif;font-size:14px;
+    padding:9px 10px;border:1.3px solid var(--line);border-radius:3px;
+    background:#fff;color:var(--ink);margin-bottom:10px;box-sizing:border-box;
+    resize:vertical;
+  }
+  .suggest-input:focus, .suggest-textarea:focus{
+    outline:2px solid var(--forest);outline-offset:1px;border-color:var(--forest);
+  }
+  .suggest-send-btn{
+    background:var(--forest);color:#fff;border:none;border-radius:3px;
+    padding:9px 18px;font-family:inherit;font-size:14px;font-weight:600;
+    cursor:pointer;
+  }
+  .suggest-send-btn:hover{background:var(--forest-deep);}
+  .suggest-send-btn:disabled{opacity:0.6;cursor:default;}
+  .suggest-status{margin-top:10px;font-size:13px;}
+  .suggest-status.ok{color:var(--forest-deep);}
+  .suggest-status.err{color:var(--rust);}
   .region-picker{
     display:flex;
     align-items:center;
@@ -643,6 +665,7 @@
     <div class="title-row">
       <h1>Calculateur d'épicerie</h1>
       <button id="listBtn" class="list-btn" type="button">🛒 Ma liste</button>
+      <button id="suggestBtn" class="list-btn" type="button">💬 Suggestion</button>
       <button id="helpBtn" class="help-btn" type="button" aria-label="Comment ça marche ?" title="Comment ça marche ?">?</button>
     </div>
     <div class="region-picker">
@@ -658,6 +681,18 @@
       <div id="shoppingListBox"></div>
       <button id="listClearAll" class="list-clear-btn" type="button">Tout vider</button>
       <div class="empty-note" style="margin-top:10px">Cette liste reste seulement sur cet appareil — elle n'est pas partagée entre ton téléphone et ton ordinateur.</div>
+    </div>
+  </div>
+
+  <div id="suggestOverlay" class="help-overlay" style="display:none">
+    <div class="help-card">
+      <button id="suggestClose" class="help-close" type="button" aria-label="Fermer">×</button>
+      <div class="help-title">💬 Une suggestion ou un bug ?</div>
+      <p class="suggest-intro">Ton message est envoyé directement — pas besoin de créer de compte ni de laisser ton courriel (sauf si tu veux une réponse).</p>
+      <input id="suggestEmail" class="suggest-input" type="email" placeholder="Ton courriel (optionnel, pour te répondre)">
+      <textarea id="suggestMessage" class="suggest-textarea" rows="5" placeholder="Ton idée, un bug, un magasin manquant..."></textarea>
+      <button id="suggestSend" class="suggest-send-btn" type="button">Envoyer</button>
+      <div id="suggestStatus" class="suggest-status"></div>
     </div>
   </div>
 
@@ -747,7 +782,7 @@
     </div>
   </div>
 
-  <div class="build-tag">Version du calculateur : 2026-09-27 10:41</div>
+  <div class="build-tag">Version du calculateur : 2026-09-27 10:48</div>
 
 </div>
 
@@ -1005,29 +1040,42 @@ function extractDisplayedPrice(format){
 function findKnownPrices(name, limit){
   const q = normalize(name);
   // découpe sur tout ce qui n'est pas lettre/chiffre, pour ignorer virgules,
-  // parenthèses, etc. (ex: "Œufs, gros (douzaine)" -> "oeufs", pas "oeufs,")
-  const firstWord = q.split(/[^a-z0-9]+/).filter(Boolean)[0];
-  if(!firstWord) return [];
+  // parenthèses, etc. (ex: "Œufs, gros (douzaine)" -> "oeufs", pas "oeufs,").
+  // On garde TOUS les mots significatifs de la recherche (pas juste le premier)
+  // pour pouvoir départager les produits par pertinence plus bas — ex: chercher
+  // "st-hubert" doit préférer un vrai produit St-Hubert à un autre produit qui
+  // ne matche que le "st" générique d'une autre marque (St-Michel, St-Ambroise...).
+  const queryWords = q.split(/[^a-z0-9]+/).filter(w => w.length >= 2);
+  if(!queryWords.length) return [];
   // Frontière de mot obligatoire (\b) + "s" final optionnel pour le singulier/
   // pluriel — évite les faux positifs du genre "hauts" qui matchait n'importe
   // où dans "Artichauts" avec un simple .includes().
-  const stem = firstWord.replace(/s$/, '');
-  const wordRe = new RegExp('\\b' + stem + 's?\\b');
+  const wordRes = queryWords.map(w => new RegExp('\\b' + w.replace(/s$/, '') + 's?\\b'));
   // Si on cherche une coupe de viande (ex: "côtes levées"), on ne veut pas
   // les sauces/assaisonnements qui la mentionnent juste comme saveur (ex:
   // "Sauce barbecue pour côtes levées") — sauf si c'est justement une sauce
   // qu'on cherche (le mot lui-même apparaît dans la recherche tapée).
   const queryVeutCondiment = CONDIMENT_TERMS.some(term => q.includes(term));
-  const matches = costcoCSV.filter(d => {
-    if(!regionOk(d)) return false;
+  const scored = [];
+  for(const d of costcoCSV){
+    if(!regionOk(d)) continue;
     const n = normalize(d.name);
     // Exclut la nourriture pour animaux, produits de toilette, etc. — sinon
     // chercher "poulet" ressort aussi de la nourriture pour chat au poulet.
-    if(NON_FOOD_EXCLUSIONS.some(term => n.includes(term))) return false;
-    if(!queryVeutCondiment && CONDIMENT_TERMS.some(term => n.includes(term))) return false;
-    return wordRe.test(n);
-  });
-  return [...matches].sort((a, b) => a.price - b.price).slice(0, limit || 5);
+    if(NON_FOOD_EXCLUSIONS.some(term => n.includes(term))) continue;
+    if(!queryVeutCondiment && CONDIMENT_TERMS.some(term => n.includes(term))) continue;
+    // Un seul mot de la recherche qui matche suffit pour garder l'item (comme
+    // avant — tolère les écarts de formulation, ex: "côtes levées" vs "côtes
+    // de dos de porc"), mais on compte le nombre de mots qui matchent pour
+    // classer les produits les plus pertinents en premier, avant de trier par
+    // prix — sinon un produit très pertinent mais un peu plus cher se faisait
+    // enterrer sous 6 produits moins pertinents mais moins chers.
+    let matchCount = 0;
+    for(const re of wordRes){ if(re.test(n)) matchCount++; }
+    if(matchCount > 0) scored.push({ item: d, matchCount });
+  }
+  scored.sort((a, b) => b.matchCount - a.matchCount || a.item.price - b.item.price);
+  return scored.map(s => s.item).slice(0, limit || 5);
 }
 
 // Essaie de faire correspondre un item (Costco ou circulaire) à une de nos
@@ -1223,7 +1271,7 @@ function render(){
 
   // Prix connus cette semaine (Costco + circulaires), triés du moins cher
   const searchTerm = product ? product.name : query;
-  const known = findKnownPrices(searchTerm, 6);
+  const known = findKnownPrices(searchTerm, 10);
   let knownHtml = '';
   if(known.length){
     knownHtml = `<div class="found-list-label">Prix trouvés (Costco + circulaires) :</div><div class="found-list">` +
@@ -1363,6 +1411,76 @@ document.getElementById('tabFuture').onclick=()=>{document.getElementById('tabFu
     openHelp();
     try { localStorage.setItem('helpSeen', '1'); } catch(e) {}
   }
+})();
+
+// Bulle "💬 Suggestion" — envoie le message via Web3Forms (service gratuit
+// tiers) plutôt qu'un lien mailto:, pour ne jamais exposer le courriel de
+// destination dans le code source de la page (mailto: l'afficherait en clair).
+// Clé d'accès Web3Forms à remplacer une fois obtenue sur https://web3forms.com/
+// (gratuit, aucune inscription par mot de passe — juste un courriel de
+// confirmation). Cette clé n'est PAS secrète : elle sert seulement à indiquer
+// à Web3Forms où relayer les messages, elle ne permet à personne de lire le
+// courriel de destination ni les messages déjà envoyés.
+const WEB3FORMS_ACCESS_KEY = "COLLE_TA_CLE_WEB3FORMS_ICI";
+
+(function initSuggestUI(){
+  const overlay = document.getElementById('suggestOverlay');
+  const statusBox = document.getElementById('suggestStatus');
+  const sendBtn = document.getElementById('suggestSend');
+  const openSuggest = () => {
+    statusBox.textContent = '';
+    statusBox.className = 'suggest-status';
+    overlay.style.display = 'flex';
+  };
+  const closeSuggest = () => { overlay.style.display = 'none'; };
+  document.getElementById('suggestBtn').onclick = openSuggest;
+  document.getElementById('suggestClose').onclick = closeSuggest;
+  overlay.onclick = (e) => { if(e.target === overlay) closeSuggest(); };
+
+  sendBtn.onclick = async () => {
+    const message = document.getElementById('suggestMessage').value.trim();
+    const email = document.getElementById('suggestEmail').value.trim();
+    if(!message){
+      statusBox.textContent = 'Écris un message avant d\'envoyer.';
+      statusBox.className = 'suggest-status err';
+      return;
+    }
+    if(WEB3FORMS_ACCESS_KEY === 'COLLE_TA_CLE_WEB3FORMS_ICI'){
+      statusBox.textContent = 'Suggestions pas encore activées sur ce site (clé manquante) — réessaie plus tard.';
+      statusBox.className = 'suggest-status err';
+      return;
+    }
+    sendBtn.disabled = true;
+    statusBox.textContent = 'Envoi en cours...';
+    statusBox.className = 'suggest-status';
+    try {
+      const resp = await fetch('https://api.web3forms.com/submit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        body: JSON.stringify({
+          access_key: WEB3FORMS_ACCESS_KEY,
+          subject: 'Suggestion - Calculateur épicerie',
+          from_name: email || 'Visiteur du calculateur',
+          message: message,
+          replyto: email || undefined,
+        }),
+      });
+      const data = await resp.json();
+      if(data.success){
+        statusBox.textContent = 'Merci ! Ton message a été envoyé.';
+        statusBox.className = 'suggest-status ok';
+        document.getElementById('suggestMessage').value = '';
+        document.getElementById('suggestEmail').value = '';
+      } else {
+        statusBox.textContent = 'Erreur lors de l\'envoi — réessaie plus tard.';
+        statusBox.className = 'suggest-status err';
+      }
+    } catch(e) {
+      statusBox.textContent = 'Erreur réseau — réessaie plus tard.';
+      statusBox.className = 'suggest-status err';
+    }
+    sendBtn.disabled = false;
+  };
 })();
 
 // Bulle "🛒 Ma liste"
