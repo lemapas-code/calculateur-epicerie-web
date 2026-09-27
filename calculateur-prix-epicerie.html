@@ -345,6 +345,67 @@
     white-space:nowrap;
     flex-shrink:0;
   }
+  .title-row{display:flex;align-items:center;gap:10px;}
+  .help-btn{
+    width:26px;height:26px;border-radius:50%;border:1.3px solid var(--forest);
+    background:#fff;color:var(--forest);font-weight:800;font-size:14px;
+    cursor:pointer;flex-shrink:0;line-height:1;
+  }
+  .help-btn:hover{background:var(--forest);color:#fff;}
+  .list-btn{
+    border:1.3px solid var(--forest);border-radius:14px;background:#fff;
+    color:var(--forest);font-weight:700;font-size:12.5px;padding:5px 12px;
+    cursor:pointer;white-space:nowrap;
+  }
+  .list-btn:hover{background:var(--forest);color:#fff;}
+  .add-list-btn{
+    border:1.3px solid var(--forest);border-radius:3px;background:#fff;
+    color:var(--forest);font-weight:700;font-size:11px;padding:2px 7px;
+    cursor:pointer;white-space:nowrap;flex-shrink:0;
+  }
+  .add-list-btn:hover{background:var(--forest);color:#fff;}
+  .list-row{
+    display:flex;align-items:center;gap:8px;padding:8px 0;
+    border-bottom:1px solid var(--line);font-size:13.5px;
+  }
+  .list-row:last-child{border-bottom:none;}
+  .list-row-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .list-row-store{font-size:11px;font-weight:700;color:var(--forest);background:var(--paper);border-radius:3px;padding:2px 6px;white-space:nowrap;flex-shrink:0;}
+  .list-row-price{font-weight:700;white-space:nowrap;flex-shrink:0;}
+  .list-row-remove{
+    border:none;background:none;color:var(--ink-soft);font-size:18px;
+    cursor:pointer;line-height:1;flex-shrink:0;padding:0 2px;
+  }
+  .list-row-remove:hover{color:var(--rust);}
+  .list-clear-btn{
+    margin-top:14px;border:1.3px solid var(--line);border-radius:3px;
+    background:#fff;color:var(--ink-soft);font-weight:700;font-size:12.5px;
+    padding:6px 12px;cursor:pointer;
+  }
+  .list-clear-btn:hover{border-color:var(--rust);color:var(--rust);}
+  .help-overlay{
+    position:fixed;inset:0;background:rgba(0,0,0,0.45);
+    display:flex;align-items:center;justify-content:center;
+    padding:20px;z-index:1000;
+  }
+  .help-card{
+    background:#fff;border-radius:6px;max-width:480px;width:100%;
+    padding:24px 22px;position:relative;box-shadow:0 8px 30px rgba(0,0,0,0.25);
+    max-height:80vh;overflow-y:auto;
+  }
+  .help-title{
+    font-family:'Fraunces',serif;font-weight:700;font-size:19px;
+    color:var(--forest-deep);margin-bottom:14px;padding-right:20px;
+  }
+  .help-list{margin:0;padding-left:18px;}
+  .help-list li{margin-bottom:11px;font-size:13.5px;line-height:1.5;color:var(--ink);}
+  .help-list li:last-child{margin-bottom:0;}
+  .help-close{
+    position:absolute;top:14px;right:14px;width:26px;height:26px;
+    border:none;background:none;font-size:20px;line-height:1;cursor:pointer;
+    color:var(--ink-soft);
+  }
+  .help-close:hover{color:var(--rust);}
   .region-picker{
     display:flex;
     align-items:center;
@@ -555,10 +616,13 @@
       line-height:1.3;
       order:1;
     }
+    .found-list .item .item-thumb{ order:0; }
     .found-list .item .real-deal-badge{ order:2; }
+    .found-list .item .item-economy{ order:2; }
     .found-list .item .item-date{ order:3; }
     .found-list .item .item-store{ order:4; }
     .found-list .item .item-price{ order:5; margin-left:auto; }
+    .found-list .item .add-list-btn{ order:6; flex:1 1 100%; margin-top:4px; }
   }
 </style>
 </head>
@@ -567,12 +631,41 @@
 <div class="tag">
   <header>
     <div class="kicker">Est-ce un bon prix?</div>
-    <h1>Calculateur d'épicerie</h1>
+    <div class="title-row">
+      <h1>Calculateur d'épicerie</h1>
+      <button id="listBtn" class="list-btn" type="button">🛒 Ma liste</button>
+      <button id="helpBtn" class="help-btn" type="button" aria-label="Comment ça marche ?" title="Comment ça marche ?">?</button>
+    </div>
     <div class="region-picker">
       <label for="regionSelect">🌍 Ma région</label>
       <select id="regionSelect"><option value="">Générique seulement (aucune région)</option></select>
     </div>
   </header>
+
+  <div id="listOverlay" class="help-overlay" style="display:none">
+    <div class="help-card">
+      <button id="listClose" class="help-close" type="button" aria-label="Fermer">×</button>
+      <div class="help-title">🛒 Ma liste d'achats</div>
+      <div id="shoppingListBox"></div>
+      <button id="listClearAll" class="list-clear-btn" type="button">Tout vider</button>
+      <div class="empty-note" style="margin-top:10px">Cette liste reste seulement sur cet appareil — elle n'est pas partagée entre ton téléphone et ton ordinateur.</div>
+    </div>
+  </div>
+
+  <div id="helpOverlay" class="help-overlay" style="display:none">
+    <div class="help-card">
+      <button id="helpClose" class="help-close" type="button" aria-label="Fermer">×</button>
+      <div class="help-title">Comment ça marche ?</div>
+      <ul class="help-list">
+        <li><strong>Cherche un produit</strong> (ex: poulet, lait, bacon) pour voir le repère de prix régulier, les prix trouvés cette semaine (Costco + circulaires), et si c'est un vrai deal.</li>
+        <li><strong>✓ VRAI DEAL</strong> veut dire que le prix est comparé à l'historique réel de ce produit — pas juste "en spécial" affiché par le magasin, mais objectivement bas comparé à d'habitude.</li>
+        <li><strong>🔥 Deals de la semaine</strong> liste les meilleurs deals détectés automatiquement, triés par catégorie — clique sur une carte pour voir le détail.</li>
+        <li><strong>🌍 Ma région</strong> ajoute des spéciaux propres à ton secteur (en plus de Costco/IGA/circulaires déjà visibles à tout le monde) — ton choix reste sauvegardé sur cet appareil.</li>
+        <li><strong>📰 Circulaires complètes</strong> en bas de page donne un lien direct vers le site de chaque magasin.</li>
+        <li>Les prix sont mis à jour automatiquement chaque semaine.</li>
+      </ul>
+    </div>
+  </div>
   <section class="weekly-deals">
     <div class="weekly-title">🔥 Deals de la semaine</div>
     <div class="deal-tabs"><button id="tabCurrent" class="deal-tab active">Cette semaine</button><button id="tabFuture" class="deal-tab">À venir</button></div>
@@ -580,7 +673,7 @@
     <div id="weeklyDealsEmpty" class="empty-note" style="display:none">Aucun deal assez fiable détecté pour cette période.</div>
   </section>
 
-  <label for="productSearch">Produit</label>
+  <label for="productSearch">Produits</label>
   <div class="category-pills" id="categoryPills"></div>
   <div class="category-pills category-pills-tags" id="tagPills"></div>
   <div class="search-wrap">
@@ -730,6 +823,69 @@ let selectedRegion = '';
 try { selectedRegion = localStorage.getItem('regionPref') || ''; } catch(e) {}
 function regionOk(d){
   return !d.region || d.region === selectedRegion;
+}
+
+// Registre des items affichés dans "Prix trouvés", pour que le bouton
+// "+ Liste" de chaque ligne sache quoi ajouter sans avoir à ré-encoder le nom
+// du produit (qui peut contenir des apostrophes/guillemets) dans un attribut HTML.
+let __itemRegistryCounter = 0;
+const __itemRegistry = new Map();
+function registerListItem(name, store, price, unit){
+  const id = __itemRegistryCounter++;
+  __itemRegistry.set(id, { name, store, price, unit });
+  return id;
+}
+
+// Liste d'achats — sauvegardée uniquement sur cet appareil (localStorage),
+// jamais partagée entre appareils ni envoyée nulle part.
+function getShoppingList(){
+  try { return JSON.parse(localStorage.getItem('shoppingList') || '[]'); } catch(e){ return []; }
+}
+function saveShoppingList(list){
+  try { localStorage.setItem('shoppingList', JSON.stringify(list)); } catch(e){}
+}
+function updateListBadge(){
+  const btn = document.getElementById('listBtn');
+  if(!btn) return;
+  const n = getShoppingList().length;
+  btn.textContent = `🛒 Ma liste${n ? ` (${n})` : ''}`;
+}
+function addToShoppingList(id){
+  const item = __itemRegistry.get(id);
+  if(!item) return;
+  const list = getShoppingList();
+  const exists = list.some(x => x.name === item.name && x.store === item.store);
+  if(!exists){
+    list.push(item);
+    saveShoppingList(list);
+  }
+  updateListBadge();
+}
+function removeFromShoppingList(idx){
+  const list = getShoppingList();
+  list.splice(idx, 1);
+  saveShoppingList(list);
+  renderShoppingList();
+  updateListBadge();
+}
+function renderShoppingList(){
+  const box = document.getElementById('shoppingListBox');
+  const list = getShoppingList();
+  if(!list.length){
+    box.innerHTML = `<div class="empty-note">Ta liste est vide — clique sur "+ Liste" à côté d'un prix pour l'ajouter ici.</div>`;
+    return;
+  }
+  box.innerHTML = list.map((item, idx) => `
+    <div class="list-row">
+      <span class="list-row-name">${item.name}</span>
+      <span class="list-row-store">${item.store}</span>
+      <span class="list-row-price">${item.price.toFixed(2)} $/${item.unit}</span>
+      <button class="list-row-remove" type="button" data-idx="${idx}" aria-label="Retirer">×</button>
+    </div>
+  `).join('');
+  box.querySelectorAll('.list-row-remove').forEach(btn => {
+    btn.onclick = () => removeFromShoppingList(parseInt(btn.dataset.idx, 10));
+  });
 }
 
 function normalize(str){
@@ -954,6 +1110,8 @@ function priceItemHTML(d){
   const economyHtml = (d.economyAmount !== undefined && d.economyAmount !== null && d.economyAmount > 0)
     ? `<span class="item-economy">−${d.economyAmount.toFixed(2)} $${d.economyPct ? ` (${d.economyPct}%)` : ''}</span>`
     : '';
+  const listId = registerListItem(displayName, store, d.price, d.unit);
+  const addListHtml = `<button class="add-list-btn" type="button" data-list-id="${listId}" onclick="event.preventDefault();event.stopPropagation();addToShoppingList(${listId});">+ Liste</button>`;
 
   // Priorité 1 : vrai historique de prix (comparé à la moyenne historique du même produit).
   // Priorité 2 (repli) : comparaison à un repère de catégorie générique.
@@ -988,6 +1146,7 @@ function priceItemHTML(d){
     ${dateLabel ? `<span class="item-date">${dateLabel}</span>` : ''}
     <span class="item-store">${store}</span>
     <span class="item-price">${displayedPrice ? `${displayedPrice}<span class="item-shelf-price">${d.price.toFixed(2)} $/${d.unit}</span>` : `${d.price.toFixed(2)} $/${d.unit}`}</span>
+    ${addListHtml}
   </${tag}>`;
 }
 
@@ -1129,6 +1288,42 @@ function renderWeeklyDeals(future=false){
 document.getElementById('tabCurrent').onclick=()=>{document.getElementById('tabCurrent').classList.add('active');document.getElementById('tabFuture').classList.remove('active');renderWeeklyDeals(false)};
 document.getElementById('tabFuture').onclick=()=>{document.getElementById('tabFuture').classList.add('active');document.getElementById('tabCurrent').classList.remove('active');renderWeeklyDeals(true)};
 
+// Bulle d'aide "Comment ça marche ?" — s'ouvre au clic sur le "?", se ferme
+// via le bouton × ou en cliquant en dehors de la carte. S'affiche aussi
+// automatiquement au tout premier passage d'un visiteur (une seule fois,
+// mémorisé sur son appareil).
+(function initHelp(){
+  const overlay = document.getElementById('helpOverlay');
+  const openHelp = () => { overlay.style.display = 'flex'; };
+  const closeHelp = () => { overlay.style.display = 'none'; };
+  document.getElementById('helpBtn').onclick = openHelp;
+  document.getElementById('helpClose').onclick = closeHelp;
+  overlay.onclick = (e) => { if(e.target === overlay) closeHelp(); };
+  let seenHelp = false;
+  try { seenHelp = localStorage.getItem('helpSeen') === '1'; } catch(e) {}
+  if(!seenHelp){
+    openHelp();
+    try { localStorage.setItem('helpSeen', '1'); } catch(e) {}
+  }
+})();
+
+// Bulle "🛒 Ma liste"
+(function initShoppingListUI(){
+  const overlay = document.getElementById('listOverlay');
+  document.getElementById('listBtn').onclick = () => {
+    renderShoppingList();
+    overlay.style.display = 'flex';
+  };
+  document.getElementById('listClose').onclick = () => { overlay.style.display = 'none'; };
+  overlay.onclick = (e) => { if(e.target === overlay) overlay.style.display = 'none'; };
+  document.getElementById('listClearAll').onclick = () => {
+    saveShoppingList([]);
+    renderShoppingList();
+    updateListBadge();
+  };
+  updateListBadge();
+})();
+
 // Sélecteur de région — options tirées des régions réellement présentes dans
 // costcoCSV (donc jamais une région vide/inexistante), en plus de l'option
 // générique par défaut ajoutée directement dans le HTML.
@@ -1178,6 +1373,12 @@ function buildCategoryPills(){
         activeCategoryFilter = cat;
         el.classList.add('active');
       }
+      // Changer de catégorie réinitialise la recherche en cours — un produit
+      // sélectionné (ou du texte tapé) pour une autre catégorie n'a plus
+      // rapport une fois qu'on filtre sur une nouvelle catégorie.
+      searchInput.value = '';
+      selectedProduct = null;
+      render();
       renderResults(searchInput.value);
     });
   });
