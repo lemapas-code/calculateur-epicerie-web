@@ -1074,6 +1074,8 @@ function renderResults(filter){
   resultsBox.querySelectorAll('.item').forEach(el => {
     el.addEventListener('click', () => {
       const name = el.getAttribute('data-name');
+      clearCategorySelection();
+      clearTagSelection();
       selectedProduct = DATA.find(d => d.name === name);
       searchInput.value = name;
       resultsBox.classList.remove('open');
@@ -1084,6 +1086,13 @@ function renderResults(filter){
 
 searchInput.addEventListener('focus', () => renderResults(searchInput.value));
 searchInput.addEventListener('input', () => {
+  // Taper dans la recherche doit remplacer ce qui est affiché, pas s'ajouter
+  // par-dessus une pastille de catégorie/étiquette encore active — sinon la
+  // liste "prix trouvés" reste bloquée sur l'ancienne catégorie (ex: tous les
+  // "Viandes") pendant qu'on tape autre chose, ce qui donne l'impression que
+  // la recherche ne fonctionne plus.
+  clearCategorySelection();
+  clearTagSelection();
   selectedProduct = null;
   renderResults(searchInput.value);
   render();
