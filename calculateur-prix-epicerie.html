@@ -378,9 +378,11 @@
     border-bottom:1px solid var(--line);font-size:13.5px;
   }
   .list-row:last-child{border-bottom:none;}
-  .list-row-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .list-row-name{flex:1;min-width:0;white-space:normal;overflow-wrap:anywhere;line-height:1.3;}
   .list-row-store{font-size:11px;font-weight:700;color:var(--forest);background:var(--paper);border-radius:3px;padding:2px 6px;white-space:nowrap;flex-shrink:0;}
-  .list-row-price{font-weight:700;white-space:nowrap;flex-shrink:0;}
+  .list-row-price{font-weight:700;white-space:nowrap;flex-shrink:0;text-align:right;}
+  .list-row-unit{display:block;font-size:11px;font-weight:400;color:var(--ink-soft);}
+  .list-row{align-items:flex-start;}
   .list-row-remove{
     border:none;background:none;color:var(--ink-soft);font-size:18px;
     cursor:pointer;line-height:1;flex-shrink:0;padding:0 2px;
@@ -631,7 +633,8 @@
   .weekly-title{font-family:'Fraunces',serif;font-weight:700;font-size:20px;color:var(--forest-deep);margin-bottom:10px;}
   .deal-tabs{display:flex;gap:8px;margin-bottom:12px}.deal-tab{border:1px solid var(--line);background:var(--card);padding:7px 12px;border-radius:3px;cursor:pointer;font-weight:700;color:var(--forest)}.deal-tab.active{background:var(--forest);color:white}
   .weekly-groups{max-height:520px;overflow-y:auto;padding-right:4px}
-  .weekly-group{margin-bottom:16px}.weekly-group:last-child{margin-bottom:0}
+  .weekly-group{margin-bottom:10px}.weekly-group:last-child{margin-bottom:0}
+  .weekly-group>summary{cursor:pointer;list-style:none;display:flex;align-items:center;gap:6px}.weekly-group>summary::-webkit-details-marker{display:none}.weekly-group>summary::before{content:'▸';font-size:13px}.weekly-group[open]>summary::before{content:'▾'}.weekly-group[open]>summary{margin-bottom:9px}.weekly-count{font-weight:400;color:var(--ink-soft)}
   .weekly-group-title{font-weight:800;font-size:12px;letter-spacing:.03em;text-transform:uppercase;color:var(--forest);margin:0 0 7px;padding-bottom:4px;border-bottom:1px solid var(--line);}
   .weekly-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.weekly-card{display:grid;grid-template-columns:1fr auto;gap:4px 12px;padding:11px;border:1px solid var(--line);border-radius:3px;cursor:pointer;background:var(--card)}.weekly-card:hover{border-color:var(--forest);background:var(--paper)}
   .weekly-card .dn{font-weight:700}.weekly-card .dp{font-weight:800;color:var(--forest-deep)}.weekly-card .dm{grid-column:1/-1;font-size:11.5px;color:var(--ink-soft)}.weekly-rank{color:var(--rust);font-weight:800;margin-right:5px}
@@ -942,9 +945,9 @@ function regionOk(d){
 // du produit (qui peut contenir des apostrophes/guillemets) dans un attribut HTML.
 let __itemRegistryCounter = 0;
 const __itemRegistry = new Map();
-function registerListItem(name, store, price, unit){
+function registerListItem(name, store, price, unit, extra){
   const id = __itemRegistryCounter++;
-  __itemRegistry.set(id, { name, store, price, unit });
+  __itemRegistry.set(id, Object.assign({ name, store, price, unit }, extra || {}));
   return id;
 }
 
@@ -989,9 +992,9 @@ function renderShoppingList(){
   }
   box.innerHTML = list.map((item, idx) => `
     <div class="list-row">
-      <span class="list-row-name">${item.name}</span>
+      <span class="list-row-name">${item.brand ? `<span class="item-brand">${item.brand}</span> ` : ''}${item.name}</span>
       <span class="list-row-store">${item.store}</span>
-      <span class="list-row-price">${item.price.toFixed(2)} $/${item.unit}</span>
+      <span class="list-row-price">${item.shelf ? `${item.shelf}<span class="list-row-unit">${item.price.toFixed(2)} $/${item.unit}</span>` : `${item.price.toFixed(2)} $/${item.unit}`}</span>
       <button class="list-row-remove" type="button" data-idx="${idx}" aria-label="Retirer">×</button>
     </div>
   `).join('');
@@ -1405,7 +1408,8 @@ function priceItemHTML(d, bestSet){
   const economyHtml = (d.economyAmount !== undefined && d.economyAmount !== null && d.economyAmount > 0)
     ? `<span class="item-economy">−${d.economyAmount.toFixed(2)} $${d.economyPct ? ` (${d.economyPct}%)` : ''}</span>`
     : '';
-  const listId = registerListItem(displayName, store, d.price, d.unit);
+  const shelfForList = extractDisplayedPrice(d.format) || (store === 'Costco' ? computeCostcoDisplayedPrice(d) : null);
+  const listId = registerListItem(displayName, store, d.price, d.unit, { brand: d.brand || '', shelf: shelfForList || '' });
   const addListHtml = `<button class="add-list-btn" type="button" data-list-id="${listId}" onclick="event.preventDefault();event.stopPropagation();addToShoppingList(${listId});">+ Liste</button>`;
 
   // Priorité 1 : vrai historique de prix (comparé à la moyenne historique du même produit).
@@ -1569,6 +1573,7 @@ function weeklyDealCandidates(future=false){
 const CATEGORY_ORDER = ['Viandes', 'Légumes & fruits', 'Laitiers & œufs', 'Épicerie', 'Pharmacie', 'Maison', 'Chien', 'Chat'];
 const CATEGORY_ICONS = {'Viandes':'🥩', 'Légumes & fruits':'🥦', 'Laitiers & œufs':'🧀', 'Épicerie':'🛒', 'Pharmacie':'💊', 'Maison':'🏠', 'Chien':'🐶', 'Chat':'🐱'};
 
+const weeklyOpenCats = new Set();
 function renderWeeklyDeals(future=false){
  const box=document.getElementById('weeklyDeals'), empty=document.getElementById('weeklyDealsEmpty'); const deals=weeklyDealCandidates(future);
  empty.style.display=deals.length?'none':'block';
@@ -1591,12 +1596,14 @@ function renderWeeklyDeals(future=false){
  box.innerHTML = orderedCats.map(cat=>{
    const cards = groups.get(cat).map(d=>{
      rank++;
-     const x=splitStoreFromName(d.name, d.store),v=extractValidityDate(d.format),pct=Math.round((1-d.price/d.medianPrice)*100),icon=d.dealLevel==='exceptional'?'🔥':d.dealLevel==='very_good'?'✅':'👍',url=STORE_URLS[x.store],displayedPrice=extractDisplayedPrice(d.format),listId=registerListItem(x.displayName, x.store, d.price, d.unit);
+     const x=splitStoreFromName(d.name, d.store),v=extractValidityDate(d.format),pct=Math.round((1-d.price/d.medianPrice)*100),icon=d.dealLevel==='exceptional'?'🔥':d.dealLevel==='very_good'?'✅':'👍',url=STORE_URLS[x.store],displayedPrice=extractDisplayedPrice(d.format),listId=registerListItem(x.displayName, x.store, d.price, d.unit, { brand: d.brand || '', shelf: displayedPrice || '' });
      const periode=(v && v.start && v.end) ? `${v.start} → ${v.end}` : (v && v.end) ? `jusqu'au ${v.end}` : 'prix courant (pas de date de fin)';
      return `<div class="weekly-card" data-search="${(d.canonicalName||x.displayName).replace(/"/g,'&quot;')}" data-url="${url||''}"><div class="dn"><span class="weekly-rank">#${rank}</span>${icon} ${x.displayName}</div><div class="dp">${displayedPrice ? `${displayedPrice}<br><span class="item-shelf-price">${d.price.toFixed(2)} $/${d.unit}</span>` : `${d.price.toFixed(2)} $/${d.unit}`}</div><div class="dm">${x.store} · score ${d.dealScore}/100 · prix habituel ~${d.medianPrice.toFixed(2)} $ · ${pct>0?pct+'% sous l\'habituel · ':''}${d.historyCount} obs. · ${periode}</div><button class="add-list-btn weekly-add-list" type="button" data-list-id="${listId}" onclick="event.preventDefault();event.stopPropagation();addToShoppingList(${listId});">+ Liste</button></div>`;
    }).join('');
-   return `<div class="weekly-group"><div class="weekly-group-title">${CATEGORY_ICONS[cat] || '🛍️'} ${cat}</div><div class="weekly-grid">${cards}</div></div>`;
+   const isOpen = weeklyOpenCats.has(cat) ? ' open' : '';
+   return `<details class="weekly-group" data-cat="${cat.replace(/"/g,'&quot;')}"${isOpen}><summary class="weekly-group-title">${CATEGORY_ICONS[cat] || '🛍️'} ${cat} <span class="weekly-count">(${groups.get(cat).length})</span></summary><div class="weekly-grid">${cards}</div></details>`;
  }).join('');
+ box.querySelectorAll('details.weekly-group').forEach(el=>el.addEventListener('toggle',()=>{ if(el.open) weeklyOpenCats.add(el.dataset.cat); else weeklyOpenCats.delete(el.dataset.cat); }));
 
  box.querySelectorAll('.weekly-card').forEach(el=>el.onclick=()=>{searchInput.value=el.dataset.search;selectedProduct=DATA.find(d=>normalize(d.name).includes(normalize(el.dataset.search)))||null;render();window.scrollTo({top:document.getElementById('productSearch').offsetTop-20,behavior:'smooth'});if(el.dataset.url)window.open(el.dataset.url,'_blank');});
 }
