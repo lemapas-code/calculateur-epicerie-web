@@ -795,7 +795,7 @@
     </div>
   </div>
 
-  <div class="build-tag">Version du calculateur : 2026-10-17 11:40</div>
+  <div class="build-tag">Version du calculateur : 2026-10-17 11:55</div>
 
 </div>
 
@@ -1113,8 +1113,29 @@ function computeCostcoDisplayedPrice(d){
 
 // Trouve les meilleures correspondances de prix connus (Costco + circulaires)
 // pour un nom de produit, triées du moins cher au plus cher.
+// Expressions équivalentes (le texte tapé est réécrit avant la recherche).
+const QUERY_ALIASES = [
+  [/\bsavons?\s+(?:a\s+|de\s+|pour\s+)?(?:le\s+|du\s+)?linge\b/g, 'lessive'],
+  [/\bsavons?\s+(?:a\s+|de\s+|pour\s+)?(?:la\s+)?lessive\b/g, 'lessive'],
+  [/\bdetergents?\s+(?:a\s+|de\s+|pour\s+)?(?:le\s+|du\s+)?linge\b/g, 'lessive'],
+  [/\bdetergents?\s+(?:a\s+|de\s+|pour\s+)?(?:la\s+)?lessive\b/g, 'lessive'],
+  [/\bproduits?\s+(?:pour\s+)?(?:le\s+)?linge\b/g, 'lessive'],
+  [/\bsavons?\s+(?:a\s+|de\s+|pour\s+)?(?:la\s+)?vaisselle\b/g, 'vaisselle'],
+  [/\bdetergents?\s+(?:a\s+|de\s+|pour\s+)?(?:la\s+)?vaisselle\b/g, 'vaisselle'],
+  [/\bliquide\s+(?:a\s+|de\s+|pour\s+)?(?:la\s+)?vaisselle\b/g, 'vaisselle'],
+  [/\bpapiers?\s+(?:de\s+)?toilettes?\b/g, 'hygienique'],
+  [/\bpapiers?\s+hygieniques?\b/g, 'hygienique'],
+  [/\bpapiers?\s+absorbants?\b/g, 'essuie-tout'],
+  [/\bsacs?\s+(?:a\s+|de\s+)?(?:poubelles?|ordures?|dechets?)\b/g, 'ordures'],
+  [/\bpate\s+a\s+dents\b/g, 'dentifrice'],
+  [/\beau\s+de\s+javel\b/g, 'javellisant'],
+  [/\bboissons?\s+gazeuses?\b/g, 'soda'],
+  [/\bfabric\s+softener\b/g, 'assouplisseur']
+];
+function applyQueryAliases(q){ QUERY_ALIASES.forEach(([re, rep]) => { q = q.replace(re, rep); }); return q; }
+
 function findKnownPrices(name, limit){
-  const q = normalize(name);
+  const q = applyQueryAliases(normalize(name));
   // découpe sur tout ce qui n'est pas lettre/chiffre, pour ignorer virgules,
   // parenthèses, etc. (ex: "Œufs, gros (douzaine)" -> "oeufs", pas "oeufs,").
   // On garde TOUS les mots significatifs de la recherche (pas juste le premier)
@@ -1128,13 +1149,25 @@ function findKnownPrices(name, limit){
   // où dans "Artichauts" avec un simple .includes().
   // Synonymes / marques courantes : un produit s'appelle souvent par sa marque
   // dans les circulaires (ex: "Downy 1,2 L" sans le mot "assouplisseur").
-  const SEARCH_SYNONYMS = {
-    assouplisseur: ['downy','snuggle','bounce','adoucisseur','assouplissant','softener'],
-    assouplissant: ['downy','snuggle','bounce','adoucisseur','assouplisseur','softener'],
-    adoucisseur: ['downy','snuggle','assouplisseur','assouplissant'],
-    detergent: ['tide','persil','gain','sunlight','lessive'],
-    lessive: ['tide','persil','gain','sunlight','detergent']
-  };
+  const SYN_GROUPS = [
+    ['lessive','detergent','tide','persil','gain','sunlight','bounce','brassees','laundry'],
+    ['assouplisseur','assouplissant','adoucisseur','downy','snuggle','fleecy','softener','bounce'],
+    ['vaisselle','dawn','palmolive','sunlight','dishwasher'],
+    ['hygienique','cashmere','charmin'],
+    ['essuie-tout','essuietout','sopalin','bounty','absorbant','viva'],
+    ['ordures','poubelle','dechets','glad','hefty'],
+    ['dentifrice','colgate','crest','sensodyne'],
+    ['javellisant','javel','clorox','bleach'],
+    ['shampooing','shampoing','shampoo'],
+    ['mouchoirs','kleenex'],
+    ['yogourt','yaourt','yogurt'],
+    ['croustilles','chips'],
+    ['soda','coke','pepsi'],
+    ['couches','pampers','huggies','diaper']
+  ];
+  const SEARCH_SYNONYMS = {};
+  SYN_GROUPS.forEach(g => g.forEach(w => { SEARCH_SYNONYMS[w] = Array.from(new Set((SEARCH_SYNONYMS[w] || []).concat(g.filter(x => x !== w)))); }));
+
   const wordRes = queryWords.map(w => {
     const alts = [w].concat(SEARCH_SYNONYMS[w] || []);
     return new RegExp('\\b(?:' + alts.map(a => a.replace(/s$/, '') + 's?').join('|') + ')\\b');
