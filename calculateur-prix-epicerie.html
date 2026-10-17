@@ -289,6 +289,8 @@
   .found-list .item.item-overpriced .item-price{
     color:var(--rust);
   }
+  .best-unit-badge{font-size:10.5px;font-weight:700;color:var(--forest-deep);background:#f3e3a3;border:1px solid #d9bf62;border-radius:3px;padding:2px 6px;white-space:nowrap;}
+  .found-list .item .best-unit-badge{order:2;}
   .real-deal-badge{
     font-size:10.5px;
     font-weight:700;
@@ -793,7 +795,7 @@
     </div>
   </div>
 
-  <div class="build-tag">Version du calculateur : 2026-10-17 11:25</div>
+  <div class="build-tag">Version du calculateur : 2026-10-17 11:40</div>
 
 </div>
 
@@ -1309,7 +1311,28 @@ function perUnitFromName(d){
   return `${(d.price / tot[0]).toFixed(2)} $/${tot[1]}`;
 }
 
-function priceItemHTML(d){
+// Prix comparable (au kg ou au L) d'un item, ou null si impossible.
+function comparableUnitPrice(d){
+  if(d.unit === 'kg' || d.unit === 'L') return { v: d.price, base: d.unit };
+  const t = perUnitFromName(d);
+  if(!t) return null;
+  const m = t.match(/^([\d.]+) \$\/(kg|L)$/);
+  return m ? { v: parseFloat(m[1]), base: m[2] } : null;
+}
+// Retourne l'item le moins cher par base (kg / L), seulement si >= 2 items comparables.
+function bestUnitPriceSet(items){
+  const groups = { kg: [], L: [] };
+  items.forEach(it => { const c = comparableUnitPrice(it); if(c) groups[c.base].push({ it, v: c.v }); });
+  const best = new Set();
+  Object.values(groups).forEach(g => {
+    if(g.length < 2) return;
+    const min = Math.min(...g.map(x => x.v));
+    g.forEach(x => { if(x.v - min < 0.005) best.add(x.it); });
+  });
+  return best;
+}
+
+function priceItemHTML(d, bestSet){
   const { store, displayName } = splitStoreFromName(d.name, d.store);
   const validity = extractValidityDate(d.format);
   const dateLabel = validity ? (validity.start ? `${validity.start} au ${validity.end}` : `jusqu'au ${validity.end}`) : '';
@@ -1352,6 +1375,7 @@ function priceItemHTML(d){
     ${thumbHtml}
     <span class="item-name">${d.brand ? `<span class="item-brand">${d.brand}</span> ` : ''}${displayName}</span>
     ${dealBadge}
+    ${bestSet && bestSet.has(d) ? `<span class="best-unit-badge">💰 Meilleur prix au ${comparableUnitPrice(d).base}</span>` : ''}
     ${economyHtml}
     ${dateLabel ? `<span class="item-date">${dateLabel}</span>` : ''}
     <span class="item-store">${store}</span>
@@ -1386,10 +1410,11 @@ function render(){
   if(searchTerm !== lastKnownQuery){ showAllKnown = false; lastKnownQuery = searchTerm; }
   const allKnown = findKnownPrices(searchTerm, 80);
   const known = showAllKnown ? allKnown : allKnown.slice(0, 10);
+  const bestSet = bestUnitPriceSet(allKnown);
   let knownHtml = '';
   if(known.length){
     knownHtml = `<div class="found-list-label">Prix trouvés (Costco + circulaires) :</div><div class="found-list">` +
-      known.map(priceItemHTML).join('') + `</div>` +
+      known.map(it => priceItemHTML(it, bestSet)).join('') + `</div>` +
       (allKnown.length > 10 ? `<button type="button" id="knownMoreBtn" style="margin:8px 0;padding:6px 12px;border:1px solid var(--forest);background:#fff;color:var(--forest);border-radius:8px;cursor:pointer;">${showAllKnown ? 'Voir moins' : 'Voir plus (' + (allKnown.length - 10) + ' autres)'}</button>` : '');
   } else {
     knownHtml = `<div class="empty-note">Aucun prix trouvé pour ce produit dans Costco ou les circulaires en ce moment.</div>`;
@@ -1696,7 +1721,7 @@ function renderFoundBox(icon, label, matches){
   document.getElementById('tagResultsBox').style.display = 'block';
   labelBox.textContent = `${icon} ${label} — ${matches.length} prix trouvés :`;
   if(matches.length){
-    listBox.innerHTML = matches.map(priceItemHTML).join('');
+    listBox.innerHTML = matches.map(it => priceItemHTML(it)).join('');
     emptyBox.style.display = 'none';
   } else {
     listBox.innerHTML = '';
