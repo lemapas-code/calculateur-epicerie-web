@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Accès — Calculateur de prix d'épicerie</title>
+<style>
+  :root{--forest:#2f4a36;--forest-deep:#1d3324;--bg:#f7f1e3;--card:#fffdf7;--line:#d9ceb2;--ink:#26301f;--muted:#6b6a58;--warn:#9c4a2f}
+  *{box-sizing:border-box}
+  body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;padding:16px}
+  .card{width:100%;max-width:420px;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:28px 24px;text-align:center;box-shadow:0 2px 10px rgba(0,0,0,.05)}
+  h1{font-size:20px;margin:0 0 6px;color:var(--forest-deep)}
+  p{line-height:1.45;margin:10px 0}
+  .muted{color:var(--muted);font-size:14px}
+  #gbtn{display:flex;justify-content:center;margin:18px 0 6px;min-height:44px}
+  button.main{background:var(--forest);color:#fff;border:0;border-radius:6px;padding:10px 16px;font-size:15px;cursor:pointer}
+  button.main:disabled{opacity:.6;cursor:default}
+  button.link{background:none;border:0;color:var(--forest);text-decoration:underline;cursor:pointer;font-size:14px;margin-top:8px}
+  textarea{width:100%;min-height:64px;border:1px solid var(--line);border-radius:6px;padding:8px;font:inherit;background:#fff;margin-top:6px}
+  .box{display:none;margin-top:14px;text-align:left}
+  .ok{color:var(--forest-deep)} .err{color:var(--warn)}
+</style>
+</head>
+<body>
+<div class="card">
+  <h1>🛒 Calculateur de prix d'épicerie</h1>
+  <p class="muted">Accès sur invitation. Connecte-toi avec ton compte Google.</p>
+  <div id="gbtn"></div>
+  <p id="status" class="muted"></p>
+
+  <div id="reqBox" class="box">
+    <p>Ton compte <strong id="who"></strong> n'a pas encore accès.</p>
+    <label class="muted" for="msg">Message pour l'administrateur (facultatif) :</label>
+    <textarea id="msg" maxlength="300" placeholder="Ex : Salut, c'est Marie, Pascal m'a parlé de ton site."></textarea>
+    <p style="text-align:center"><button class="main" id="reqBtn" type="button">Demander l'accès</button></p>
+  </div>
+  <div id="doneBox" class="box" style="text-align:center"></div>
+  <p><button class="link" id="switch" type="button" style="display:none">Utiliser un autre compte Google</button></p>
+</div>
+
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script>
+let lastCredential = null;
+const $ = id => document.getElementById(id);
+function show(id, on){ $(id).style.display = on ? 'block' : 'none'; }
+
+function afterLogin(r){
+  $('status').textContent = '';
+  $('switch').style.display = 'inline';
+  if(r.status === 'ok'){ location.replace('/'); return; }
+  $('who').textContent = r.email;
+  show('reqBox', false); show('doneBox', false);
+  if(r.status === 'pending'){
+    $('doneBox').innerHTML = '<p class="ok">✅ Ta demande est envoyée. Tu auras accès dès qu\'elle sera approuvée — reviens ici et reconnecte-toi.</p>';
+    show('doneBox', true);
+  } else if(r.status === 'denied'){
+    $('doneBox').innerHTML = '<p class="err">Ta demande n\'a pas été acceptée.</p>';
+    show('doneBox', true);
+  } else {
+    show('reqBox', true);
+  }
+}
+
+async function handleCredential(resp){
+  lastCredential = resp.credential;
+  $('status').textContent = 'Vérification…';
+  try{
+    const r = await fetch('/api/google-login', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({credential: resp.credential})});
+    const data = await r.json();
+    if(!r.ok){ $('status').innerHTML = '<span class="err">Connexion refusée (' + (data.error || r.status) + ').</span>'; return; }
+    afterLogin(data);
+  }catch(e){ $('status').innerHTML = '<span class="err">Erreur réseau. Réessaie.</span>'; }
+}
+
+$('reqBtn').onclick = async () => {
+  $('reqBtn').disabled = true;
+  try{
+    const r = await fetch('/api/request-access', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({credential: lastCredential, message: $('msg').value})});
+    const data = await r.json();
+    if(r.ok) afterLogin({status: data.status === 'deja_approuve' ? 'ok' : data.status, email: $('who').textContent});
+    else { $('status').innerHTML = '<span class="err">Impossible d\'envoyer la demande (' + (data.error || r.status) + ').</span>'; $('reqBtn').disabled = false; }
+  }catch(e){ $('reqBtn').disabled = false; }
+};
+$('switch').onclick = () => { fetch('/api/logout').finally(() => { if(window.google && google.accounts) google.accounts.id.disableAutoSelect(); location.reload(); }); };
+
+window.onload = async () => {
+  let clientId = '';
+  try{ clientId = (await (await fetch('/api/config')).json()).clientId; }catch(e){}
+  if(!clientId){ $('status').innerHTML = '<span class="err">Configuration incomplète (identifiant Google manquant).</span>'; return; }
+  const init = () => {
+    if(!(window.google && google.accounts && google.accounts.id)){ return setTimeout(init, 150); }
+    google.accounts.id.initialize({client_id: clientId, callback: handleCredential, ux_mode: 'popup'});
+    google.accounts.id.renderButton($('gbtn'), {theme:'outline', size:'large', text:'signin_with', locale:'fr', width: 280});
+  };
+  init();
+};
+</script>
+</body>
+</html>

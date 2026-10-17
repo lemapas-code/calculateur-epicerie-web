@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Administration — accès</title>
+<style>
+  :root{--forest:#2f4a36;--forest-deep:#1d3324;--bg:#f7f1e3;--card:#fffdf7;--line:#d9ceb2;--ink:#26301f;--muted:#6b6a58;--warn:#9c4a2f}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;padding:16px}
+  .wrap{max-width:760px;margin:0 auto}
+  h1{font-size:22px;color:var(--forest-deep)} h2{font-size:16px;margin:0 0 10px;color:var(--forest-deep)}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:14px 16px;margin:14px 0}
+  .row{display:flex;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line);flex-wrap:wrap}
+  .row:last-child{border-bottom:0} .row .e{flex:1;min-width:180px;word-break:break-all}
+  .small{font-size:13px;color:var(--muted)}
+  button{border:1px solid var(--forest);background:#fff;color:var(--forest);border-radius:6px;padding:6px 10px;cursor:pointer;font-size:14px}
+  button.ok{background:var(--forest);color:#fff} button.no{border-color:var(--warn);color:var(--warn)}
+  input[type=text],textarea{width:100%;border:1px solid var(--line);border-radius:6px;padding:8px;font:inherit;background:#fff}
+  .top{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px}
+  a{color:var(--forest)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top"><h1>🔑 Gestion des accès</h1><div><a href="/">← Calculateur</a> · <a href="/api/logout">Déconnexion</a></div></div>
+
+  <div class="card"><h2>Demandes en attente (<span id="nPending">0</span>)</h2><div id="pending" class="small">Chargement…</div></div>
+
+  <div class="card"><h2>Ajouter des courriels</h2>
+    <p class="small" style="margin-top:0">Un courriel Google par ligne (ou séparés par virgules / points-virgules). Colle directement une colonne Excel, ou charge un fichier CSV.</p>
+    <textarea id="bulk" rows="4" placeholder="marie@gmail.com&#10;paul@gmail.com"></textarea>
+    <p><button class="ok" id="addBtn" type="button">Ajouter</button> <input type="file" id="csvFile" accept=".csv,.txt" style="margin-left:8px"> <span id="addMsg" class="small"></span></p>
+  </div>
+
+  <div class="card"><h2>Personnes avec accès (<span id="nUsers">0</span>)</h2>
+    <input type="text" id="filter" placeholder="Filtrer…" style="margin-bottom:8px">
+    <div id="users" class="small"></div>
+    <p><button id="exportBtn" type="button">Exporter en CSV</button></p>
+  </div>
+
+  <div class="card"><h2>Demandes refusées (<span id="nDenied">0</span>)</h2><div id="denied" class="small"></div></div>
+</div>
+<script>
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+let state = {pending:[], users:[], denied:[]};
+
+async function api(path, body){
+  const r = await fetch(path, body ? {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)} : {});
+  if(r.status === 401 || r.status === 403){ location.href = '/login'; throw new Error('auth'); }
+  return r.json();
+}
+async function act(action, email){ await api('/api/admin/action', {action, email}); load(); }
+document.addEventListener('click', e => { const b = e.target.closest('button[data-a]'); if(!b) return; const a = b.dataset.a, em = b.dataset.e; if(a === 'remove' && !confirm('Retirer l\'accès à ' + em + ' ?')) return; act(a, em); });
+
+function render(){
+  $('nPending').textContent = state.pending.length;
+  $('nUsers').textContent = state.users.length;
+  $('nDenied').textContent = state.denied.length;
+  $('pending').innerHTML = state.pending.length ? state.pending.map(p => `<div class="row"><div class="e"><strong>${esc(p.email)}</strong>${p.name ? ' — ' + esc(p.name) : ''}${p.message ? '<br><span class="small">« ' + esc(p.message) + ' »</span>' : ''}</div><button class="ok" data-a="approve" data-e="${esc(p.email)}">Approuver</button><button class="no" data-a="deny" data-e="${esc(p.email)}">Refuser</button></div>`).join('') : 'Aucune demande.';
+  const f = $('filter').value.trim().toLowerCase();
+  const users = state.users.filter(u => !f || u.includes(f));
+  $('users').innerHTML = users.length ? users.map(u => `<div class="row"><div class="e">${esc(u)}</div><button class="no" data-a="remove" data-e="${esc(u)}">Retirer</button></div>`).join('') : 'Personne.';
+  $('denied').innerHTML = state.denied.length ? state.denied.map(u => `<div class="row"><div class="e">${esc(u)}</div><button data-a="approve" data-e="${esc(u)}">Approuver finalement</button><button data-a="undeny" data-e="${esc(u)}">Effacer</button></div>`).join('') : 'Aucune.';
+}
+async function load(){ state = await api('/api/admin/list'); render(); }
+
+function parseEmails(text){ return (text.match(/[^\s,;"'<>]+@[^\s,;"'<>]+\.[^\s,;"'<>]+/g) || []); }
+$('addBtn').onclick = async () => {
+  const emails = parseEmails($('bulk').value);
+  if(!emails.length){ $('addMsg').textContent = 'Aucun courriel valide trouvé.'; return; }
+  const r = await api('/api/admin/action', {action:'import', emails});
+  $('addMsg').textContent = r.importes + ' ajouté(s).'; $('bulk').value = ''; load();
+};
+$('csvFile').onchange = e => { const f = e.target.files[0]; if(!f) return; const rd = new FileReader(); rd.onload = () => { $('bulk').value = (($('bulk').value ? $('bulk').value + '\n' : '') + parseEmails(String(rd.result)).join('\n')); }; rd.readAsText(f); };
+$('filter').oninput = render;
+$('exportBtn').onclick = () => {
+  const blob = new Blob(['courriel\n' + state.users.join('\n') + '\n'], {type:'text/csv'});
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'acces-calculateur.csv'; a.click();
+};
+load(); setInterval(load, 60000);
+</script>
+</body>
+</html>
