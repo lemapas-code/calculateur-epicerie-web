@@ -728,6 +728,17 @@
     <div id="weeklyDealsEmpty" class="empty-note" style="display:none">Aucun deal assez fiable détecté pour cette période.</div>
   </section>
 
+  <section class="weekly-deals merchant-deals">
+    <div class="weekly-title">🏪 Deals par marchand</div>
+    <div class="category-pills" id="merchantPills"></div>
+    <div class="deal-tabs"><button id="mTabReal" class="deal-tab active" type="button">✓ Vrais deals</button><button id="mTabAll" class="deal-tab" type="button">🏷️ Tous les spéciaux</button></div>
+    <div class="deal-tabs"><button id="mTabCurrent" class="deal-tab active" type="button">Présent</button><button id="mTabFuture" class="deal-tab" type="button">À venir</button></div>
+    <div class="found-list-label" id="merchantLabel"></div>
+    <div class="found-list" id="merchantList"></div>
+    <div class="empty-note" id="merchantEmpty" style="display:none">Rien à afficher pour ce marchand et cette période.</div>
+    <button type="button" id="merchantMore" class="deal-tab" style="display:none;margin-top:8px">Voir plus</button>
+  </section>
+
   <label for="productSearch">Produits</label>
   <div class="category-pills" id="categoryPills"></div>
   <div class="category-pills category-pills-tags" id="tagPills"></div>
@@ -795,7 +806,7 @@
     </div>
   </div>
 
-  <div class="build-tag">Version du calculateur : 2026-10-17 11:55</div>
+  <div class="build-tag">Version du calculateur : 2026-10-17 12:20</div>
 
 </div>
 
@@ -1150,7 +1161,7 @@ function findKnownPrices(name, limit){
   // Synonymes / marques courantes : un produit s'appelle souvent par sa marque
   // dans les circulaires (ex: "Downy 1,2 L" sans le mot "assouplisseur").
   const SYN_GROUPS = [
-    ['lessive','detergent','tide','persil','gain','sunlight','bounce','brassees','laundry'],
+    ['lessive','tide','persil','gain','sunlight','bounce','brassees','laundry'],
     ['assouplisseur','assouplissant','adoucisseur','downy','snuggle','fleecy','softener','bounce'],
     ['vaisselle','dawn','palmolive','sunlight','dishwasher'],
     ['hygienique','cashmere','charmin'],
@@ -1697,10 +1708,69 @@ const WEB3FORMS_ACCESS_KEY = "78d54a53-7a8b-45ca-9163-b19cda2201a6";
     try { localStorage.setItem('regionPref', selectedRegion); } catch(e) {}
     render();
     renderWeeklyDeals(document.getElementById('tabFuture').classList.contains('active'));
+    if(typeof renderMerchantDeals === 'function') renderMerchantDeals();
   };
 })();
 
 renderWeeklyDeals(false);
+
+// ===== Deals par marchand =====
+// "Vrai deal" = mêmes critères que le badge ✓ VRAI DEAL (historique réel).
+// "Spécial" = item de circulaire (dates de validité) ou avec un rabais affiché.
+let merchantSel = null, merchantReal = true, merchantFuture = false, merchantLimit = 40;
+function isRealDealItem(d){
+  return !!((d.realDeal && d.avgPrice !== undefined) ||
+    (d.medianPrice !== undefined && ['exceptional','very_good','good'].includes(d.dealLevel)));
+}
+function isSpecialItem(d){
+  return (d.economyAmount !== undefined && d.economyAmount !== null && d.economyAmount > 0) || !!extractValidityDate(d.format);
+}
+function merchantDealScore(d){
+  if(d.medianPrice) return 1 - d.price / d.medianPrice;
+  if(d.avgPrice) return 1 - d.price / d.avgPrice;
+  return (d.economyPct || 0) / 100;
+}
+function renderMerchantDeals(){
+  const today = new Date().toISOString().slice(0, 10);
+  const seen = new Set(), byStore = new Map();
+  (costcoCSV || []).forEach(d => {
+    if(!regionOk(d)) return;
+    if(isFutureItem(d, today) !== merchantFuture) return;
+    const { store, displayName } = splitStoreFromName(d.name, d.store);
+    const real = isRealDealItem(d), special = isSpecialItem(d);
+    if(!real && !special) return;
+    const k = store + '|' + displayName + '|' + d.price + '|' + d.unit;
+    if(seen.has(k)) return; seen.add(k);
+    if(!byStore.has(store)) byStore.set(store, { real: [], all: [] });
+    const e = byStore.get(store);
+    e.all.push(d); if(real) e.real.push(d);
+  });
+  const stores = [...byStore.keys()].sort((a, b) => byStore.get(b).real.length - byStore.get(a).real.length || byStore.get(b).all.length - byStore.get(a).all.length || a.localeCompare(b));
+  if(!merchantSel || !byStore.has(merchantSel)) merchantSel = stores[0] || null;
+  document.getElementById('merchantPills').innerHTML = stores.map(st =>
+    `<button type="button" class="category-pill${st === merchantSel ? ' active' : ''}" data-store="${st.replace(/"/g,'&quot;')}">${st} (${byStore.get(st).real.length}/${byStore.get(st).all.length})</button>`).join('');
+  document.querySelectorAll('#merchantPills .category-pill').forEach(b => b.onclick = () => { merchantSel = b.dataset.store; merchantLimit = 40; renderMerchantDeals(); });
+
+  const list = document.getElementById('merchantList'), empty = document.getElementById('merchantEmpty'), more = document.getElementById('merchantMore'), label = document.getElementById('merchantLabel');
+  if(!merchantSel){ list.innerHTML = ''; label.textContent = ''; empty.style.display = 'block'; more.style.display = 'none'; return; }
+  const e = byStore.get(merchantSel);
+  const items = (merchantReal ? e.real : e.all).slice().sort((a, b) => merchantDealScore(b) - merchantDealScore(a) || a.price - b.price);
+  label.textContent = `${merchantSel} — ${merchantReal ? 'vrais deals' : 'tous les spéciaux'} : ${items.length}  (pastille : vrais deals / spéciaux)`;
+  empty.style.display = items.length ? 'none' : 'block';
+  list.innerHTML = items.slice(0, merchantLimit).map(it => priceItemHTML(it)).join('');
+  more.style.display = items.length > merchantLimit ? 'inline-block' : 'none';
+  more.textContent = `Voir plus (${items.length - merchantLimit} autres)`;
+}
+function setMerchantTab(a, b, firstActive){
+  document.getElementById(a).classList.toggle('active', firstActive);
+  document.getElementById(b).classList.toggle('active', !firstActive);
+}
+document.getElementById('mTabReal').onclick = () => { merchantReal = true; merchantLimit = 40; setMerchantTab('mTabReal','mTabAll',true); renderMerchantDeals(); };
+document.getElementById('mTabAll').onclick = () => { merchantReal = false; merchantLimit = 40; setMerchantTab('mTabReal','mTabAll',false); renderMerchantDeals(); };
+document.getElementById('mTabCurrent').onclick = () => { merchantFuture = false; merchantLimit = 40; setMerchantTab('mTabCurrent','mTabFuture',true); renderMerchantDeals(); };
+document.getElementById('mTabFuture').onclick = () => { merchantFuture = true; merchantLimit = 40; setMerchantTab('mTabCurrent','mTabFuture',false); renderMerchantDeals(); };
+document.getElementById('merchantMore').onclick = () => { merchantLimit += 40; renderMerchantDeals(); };
+renderMerchantDeals();
 
 // Pastilles de catégorie au-dessus de la recherche de produit — permettent
 // de filtrer d'un coup sur une famille (Viandes, Légumes & fruits, etc.),
