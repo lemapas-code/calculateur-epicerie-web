@@ -378,7 +378,9 @@
     border-bottom:1px solid var(--line);font-size:13.5px;
   }
   .list-row:last-child{border-bottom:none;}
-  .list-row-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .list-row{flex-wrap:wrap;}
+  .list-row-name{flex:1 1 140px;min-width:0;white-space:normal;overflow-wrap:anywhere;line-height:1.25;}
+  @media (max-width:520px){ .list-row-name{flex-basis:100%;} .list-row-store{margin-left:0;} .list-row-price{margin-left:auto;} }
   .list-row-store{font-size:11px;font-weight:700;color:var(--forest);background:var(--paper);border-radius:3px;padding:2px 6px;white-space:nowrap;flex-shrink:0;}
   .list-row-price{font-weight:700;white-space:nowrap;flex-shrink:0;}
   .list-row-remove{
@@ -812,7 +814,7 @@
     </div>
   </div>
 
-  <div class="build-tag">Version du calculateur : 2026-10-17 13:45</div>
+  <div class="build-tag">Version du calculateur : 2026-10-17 14:00</div>
 
 </div>
 
@@ -1423,7 +1425,8 @@ function priceItemHTML(d, bestSet){
     ? `<span class="item-economy">−${d.economyAmount.toFixed(2)} $${d.economyPct ? ` (${d.economyPct}%)` : ''}</span>`
     : '';
   const listShelf = extractDisplayedPrice(d.format) || (store === 'Costco' ? computeCostcoDisplayedPrice(d) : null) || '';
-  const listId = registerListItem(displayName, store, d.price, d.unit, listShelf);
+  const listName = (d.brand && !normalize(displayName).includes(normalize(d.brand))) ? `${d.brand} ${displayName}` : displayName;
+  const listId = registerListItem(listName, store, d.price, d.unit, listShelf);
   const addListHtml = `<button class="add-list-btn" type="button" data-list-id="${listId}" onclick="event.preventDefault();event.stopPropagation();addToShoppingList(${listId});">+ Liste</button>`;
 
   // Priorité 1 : vrai historique de prix (comparé à la moyenne historique du même produit).
