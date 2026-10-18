@@ -793,7 +793,7 @@
     </div>
   </div>
 
-  <div class="build-tag">Version du calculateur : 2026-10-17 11:06</div>
+  <div class="build-tag">Version du calculateur : 2026-10-17 11:25</div>
 
 </div>
 
@@ -1124,7 +1124,19 @@ function findKnownPrices(name, limit){
   // Frontière de mot obligatoire (\b) + "s" final optionnel pour le singulier/
   // pluriel — évite les faux positifs du genre "hauts" qui matchait n'importe
   // où dans "Artichauts" avec un simple .includes().
-  const wordRes = queryWords.map(w => new RegExp('\\b' + w.replace(/s$/, '') + 's?\\b'));
+  // Synonymes / marques courantes : un produit s'appelle souvent par sa marque
+  // dans les circulaires (ex: "Downy 1,2 L" sans le mot "assouplisseur").
+  const SEARCH_SYNONYMS = {
+    assouplisseur: ['downy','snuggle','bounce','adoucisseur','assouplissant','softener'],
+    assouplissant: ['downy','snuggle','bounce','adoucisseur','assouplisseur','softener'],
+    adoucisseur: ['downy','snuggle','assouplisseur','assouplissant'],
+    detergent: ['tide','persil','gain','sunlight','lessive'],
+    lessive: ['tide','persil','gain','sunlight','detergent']
+  };
+  const wordRes = queryWords.map(w => {
+    const alts = [w].concat(SEARCH_SYNONYMS[w] || []);
+    return new RegExp('\\b(?:' + alts.map(a => a.replace(/s$/, '') + 's?').join('|') + ')\\b');
+  });
   // Si on cherche une coupe de viande (ex: "côtes levées"), on ne veut pas
   // les sauces/assaisonnements qui la mentionnent juste comme saveur (ex:
   // "Sauce barbecue pour côtes levées") — sauf si c'est justement une sauce
@@ -1280,6 +1292,23 @@ function toKg(qty, unit){
 
 // Génère le HTML d'une ligne de prix (utilisé dans "Prix trouvés" pour un
 // produit choisi, et dans la recherche par étiquette : sans gluten, pain, etc.)
+// Pour les items vendus "à l'unité" ($/un), tente de retrouver le poids/volume
+// dans le nom (ex: "4,35 L", "910 g", "12 × 355 ml") pour afficher aussi un
+// prix au litre/kg comparable. Retourne '' si aucun format n'est détectable.
+function perUnitFromName(d){
+  if(d.unit !== 'un') return '';
+  const txt = (d.name || '').replace(/\s+/g,' ');
+  const toBase = (q,u) => { u=u.toLowerCase(); return u==='kg'?[q,'kg']:u==='g'?[q/1000,'kg']:u==='l'?[q,'L']:u==='ml'?[q/1000,'L']:null; };
+  let m = txt.match(/(\d+)\s*[×xX]\s*(\d+(?:[.,]\d+)?)\s*(kg|g|ml|l)\b/i), tot=null;
+  if(m){ const b=toBase(parseFloat(m[2].replace(',','.')), m[3]); if(b) tot=[b[0]*parseInt(m[1],10), b[1]]; }
+  else {
+    m = txt.match(/(\d+(?:[.,]\d+)?)\s*(kg|g|ml|l)\b/i);
+    if(m) tot = toBase(parseFloat(m[1].replace(',','.')), m[2]);
+  }
+  if(!tot || !(tot[0] > 0)) return '';
+  return `${(d.price / tot[0]).toFixed(2)} $/${tot[1]}`;
+}
+
 function priceItemHTML(d){
   const { store, displayName } = splitStoreFromName(d.name, d.store);
   const validity = extractValidityDate(d.format);
@@ -1326,7 +1355,7 @@ function priceItemHTML(d){
     ${economyHtml}
     ${dateLabel ? `<span class="item-date">${dateLabel}</span>` : ''}
     <span class="item-store">${store}</span>
-    <span class="item-price">${displayedPrice ? `${displayedPrice}<span class="item-shelf-price">${d.price.toFixed(2)} $/${d.unit}</span>` : `${d.price.toFixed(2)} $/${d.unit}`}</span>
+    <span class="item-price">${displayedPrice ? `${displayedPrice}<span class="item-shelf-price">${d.price.toFixed(2)} $/${d.unit}</span>` : `${d.price.toFixed(2)} $/${d.unit}${perUnitFromName(d) ? `<span class="item-shelf-price">${perUnitFromName(d)}</span>` : ''}`}</span>
     ${addListHtml}
   </${tag}>`;
 }
