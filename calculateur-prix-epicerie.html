@@ -793,7 +793,7 @@
     </div>
   </div>
 
-  <div class="build-tag">Version du calculateur : 2026-10-17 10:36</div>
+  <div class="build-tag">Version du calculateur : 2026-10-17 11:06</div>
 
 </div>
 
@@ -1148,7 +1148,8 @@ function findKnownPrices(name, limit){
     for(const re of wordRes){ if(re.test(n)) matchCount++; }
     if(matchCount > 0) scored.push({ item: d, matchCount });
   }
-  scored.sort((a, b) => b.matchCount - a.matchCount || a.item.price - b.item.price);
+  const isDeal = it => (it.realDeal && it.avgPrice !== undefined) || (it.medianPrice !== undefined && ['exceptional','very_good','good'].includes(it.dealLevel)) ? 1 : 0;
+  scored.sort((a, b) => b.matchCount - a.matchCount || isDeal(b.item) - isDeal(a.item) || a.item.price - b.item.price);
   return scored.map(s => s.item).slice(0, limit || 5);
 }
 
@@ -1330,6 +1331,8 @@ function priceItemHTML(d){
   </${tag}>`;
 }
 
+let showAllKnown = false;
+let lastKnownQuery = '';
 function render(){
   const product = selectedProduct;
   const query = searchInput.value.trim();
@@ -1351,11 +1354,14 @@ function render(){
 
   // Prix connus cette semaine (Costco + circulaires), triés du moins cher
   const searchTerm = product ? product.name : query;
-  const known = findKnownPrices(searchTerm, 10);
+  if(searchTerm !== lastKnownQuery){ showAllKnown = false; lastKnownQuery = searchTerm; }
+  const allKnown = findKnownPrices(searchTerm, 80);
+  const known = showAllKnown ? allKnown : allKnown.slice(0, 10);
   let knownHtml = '';
   if(known.length){
     knownHtml = `<div class="found-list-label">Prix trouvés (Costco + circulaires) :</div><div class="found-list">` +
-      known.map(priceItemHTML).join('') + `</div>`;
+      known.map(priceItemHTML).join('') + `</div>` +
+      (allKnown.length > 10 ? `<button type="button" id="knownMoreBtn" style="margin:8px 0;padding:6px 12px;border:1px solid var(--forest);background:#fff;color:var(--forest);border-radius:8px;cursor:pointer;">${showAllKnown ? 'Voir moins' : 'Voir plus (' + (allKnown.length - 10) + ' autres)'}</button>` : '');
   } else {
     knownHtml = `<div class="empty-note">Aucun prix trouvé pour ce produit dans Costco ou les circulaires en ce moment.</div>`;
   }
@@ -1409,6 +1415,8 @@ function render(){
       ${ownPriceHtml}
     </div>
   `;
+  const moreBtn = document.getElementById('knownMoreBtn');
+  if(moreBtn) moreBtn.onclick = () => { showAllKnown = !showAllKnown; render(); };
 }
 
 [priceInput, qtyInput, unitSel].forEach(el => el.addEventListener('input', render));
