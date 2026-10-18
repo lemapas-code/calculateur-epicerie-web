@@ -814,7 +814,7 @@
     </div>
   </div>
 
-  <div class="build-tag">Version du calculateur : 2026-10-18 08:35</div>
+  <div class="build-tag">Version du calculateur : 2026-10-18 09:00</div>
 
 </div>
 
@@ -1211,7 +1211,10 @@ function findKnownPrices(name, limit){
   // ne matche que le "st" générique d'une autre marque (St-Michel, St-Ambroise...).
   const vaisselleLave = /lave/.test(q) && /vaisselle/.test(q);
   const vaisselleMain = /\bvaisselle\b/.test(q) && !/lave/.test(q);
-  const queryWords = q.split(/[^a-z0-9]+/).filter(w => w.length >= 2);
+  // Mots vides ignorés ("au", "de"…) : sinon "Beurre (au kg)" ramenait tout ce qui contient "au" ou "kg".
+  const QUERY_STOPWORDS = new Set(['au','aux','de','du','des','la','le','les','et','ou','un','une','en','pour','sans','avec','kg','lb','un','sur']);
+  let queryWords = q.split(/[^a-z0-9]+/).filter(w => w.length >= 2 && !QUERY_STOPWORDS.has(w));
+  if(!queryWords.length) queryWords = q.split(/[^a-z0-9]+/).filter(w => w.length >= 2);
   if(!queryWords.length) return [];
   // Frontière de mot obligatoire (\b) + "s" final optionnel pour le singulier/
   // pluriel — évite les faux positifs du genre "hauts" qui matchait n'importe
@@ -1519,7 +1522,8 @@ function render(){
   }
 
   // Prix connus cette semaine (Costco + circulaires), triés du moins cher
-  const searchTerm = product ? product.name : query;
+  // Nom du repère sans la mention d'unité entre parenthèses (ex: "Beurre (au kg)" -> "Beurre").
+  const searchTerm = product ? product.name.replace(/\s*\([^)]*\)\s*/g, ' ').trim() : query;
   if(searchTerm !== lastKnownQuery){ showAllKnown = false; showAllOther = false; lastKnownQuery = searchTerm; }
   const allFound = findKnownPrices(searchTerm, 160);
   let allKnown = allFound.filter(it => primaryFlags.get(it));
