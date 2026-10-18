@@ -498,6 +498,30 @@
   .weekly-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.weekly-card{display:grid;grid-template-columns:1fr auto;gap:4px 12px;padding:11px;border:1px solid var(--line);border-radius:3px;cursor:pointer;background:var(--card)}.weekly-card:hover{border-color:var(--forest);background:var(--paper)}
   .weekly-card .dn{font-weight:700}.weekly-card .dp{font-weight:800;color:var(--forest-deep)}.weekly-card .dm{grid-column:1/-1;font-size:11.5px;color:var(--ink-soft)}.weekly-rank{color:var(--rust);font-weight:800;margin-right:5px}
   @media(max-width:760px){.weekly-deals{padding:12px;margin:0 0 16px}.weekly-groups{max-height:300px}.weekly-grid{grid-template-columns:1fr}.weekly-card{padding:8px}.weekly-card .dm{font-size:10.5px}}
+
+  /* Sur téléphone, une seule ligne pour nom+badge+date+magasin+prix devient illisible
+     (le nom se fait tronquer à quelques lettres). On passe donc à un affichage sur
+     deux lignes : le nom du produit en entier en haut, puis le reste en dessous. */
+  @media(max-width:480px){
+    .found-list .item{
+      flex-wrap:wrap;
+      align-items:center;
+      row-gap:5px;
+    }
+    .found-list .item .item-name{
+      flex:1 1 100%;
+      white-space:normal;
+      overflow:visible;
+      text-overflow:clip;
+      font-size:13.5px;
+      line-height:1.3;
+      order:1;
+    }
+    .found-list .item .real-deal-badge{ order:2; }
+    .found-list .item .item-date{ order:3; }
+    .found-list .item .item-store{ order:4; }
+    .found-list .item .item-price{ order:5; margin-left:auto; }
+  }
 </style>
 </head>
 <body>
