@@ -1003,12 +1003,18 @@ function findKnownPrices(name, limit){
   // où dans "Artichauts" avec un simple .includes().
   const stem = firstWord.replace(/s$/, '');
   const wordRe = new RegExp('\\b' + stem + 's?\\b');
+  // Si on cherche une coupe de viande (ex: "côtes levées"), on ne veut pas
+  // les sauces/assaisonnements qui la mentionnent juste comme saveur (ex:
+  // "Sauce barbecue pour côtes levées") — sauf si c'est justement une sauce
+  // qu'on cherche (le mot lui-même apparaît dans la recherche tapée).
+  const queryVeutCondiment = CONDIMENT_TERMS.some(term => q.includes(term));
   const matches = costcoCSV.filter(d => {
     if(!regionOk(d)) return false;
     const n = normalize(d.name);
     // Exclut la nourriture pour animaux, produits de toilette, etc. — sinon
     // chercher "poulet" ressort aussi de la nourriture pour chat au poulet.
     if(NON_FOOD_EXCLUSIONS.some(term => n.includes(term))) return false;
+    if(!queryVeutCondiment && CONDIMENT_TERMS.some(term => n.includes(term))) return false;
     return wordRe.test(n);
   });
   return [...matches].sort((a, b) => a.price - b.price).slice(0, limit || 5);
@@ -1023,6 +1029,14 @@ const NON_FOOD_EXCLUSIONS = [
   'chat', 'chien', 'animal', 'animaux', 'litière', 'litiere',
   'shampooing', 'savon', 'dentifrice', 'lotion', 'crème pour', 'creme pour',
   'gâterie', 'gaterie', 'friandise pour'
+];
+
+// Sauces, assaisonnements, marinades qui mentionnent une coupe de viande dans
+// leur nom (ex: "Sauce barbecue pour côtes levées") — à exclure quand on
+// cherche la viande elle-même, sinon elles noient les vrais résultats de
+// viande sous des condiments (voir findKnownPrices).
+const CONDIMENT_TERMS = [
+  'sauce', 'assaisonnement', 'vinaigrette', 'marinade', 'epice', 'epices'
 ];
 
 function findMatchingDataProduct(itemName){
