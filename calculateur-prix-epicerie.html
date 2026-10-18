@@ -976,7 +976,7 @@ function normalize(str){
     .replace(/æ/g, 'ae');
 }
 
-const knownStores = /\s*\((IGA|Maxi|Metro|Super C|Provigo|Walmart|Familiprix|Jean Coutu|Uniprix|Brunet|Pharmaprix|Adonis|Tigre Géant|L'intermarché|Bulk Barn|Liquidation Marie|Marché Bonichoix|Mayrand|Avril|Marché Tradition|Marché Richelieu|Marché Ami|Pasquier|Supermarché PA|Fraîchement Bon|Kim Phat|Marché Bonanza Lalumière|Marché Vie en Vert|Marché Nuvo|PA Nature|Marchés Tau|Costco)\)\s*$/;
+const knownStores = /\s*\((IGA|Maxi|Metro|Super C|Provigo|Walmart|Familiprix|Jean Coutu|Uniprix|Brunet|Pharmaprix|Adonis|Tigre Géant|L'intermarché|Bulk Barn|Liquidation Marie|Marché Bonichoix|Mayrand|Avril|Marché Tradition|Marché Richelieu|Marché Ami|Pasquier|Supermarché PA|Fraîchement Bon|Kim Phat|Marché Bonanza Lalumière|Marché Vie en Vert|Marché Nuvo|PA Nature|Marchés Tau|Chico|Costco)\)\s*$/;
 
 const STORE_URLS = {
   'IGA': 'https://www.iga.ca/fr/circulaire',
@@ -1628,7 +1628,14 @@ const TAG_RULES = [
   { label: 'Sans gluten',        icon: '🌾', pattern: /sans gluten|gluten.?free/i },
   { label: 'Céréales',           icon: '🥣', pattern: /c[ée]r[ée]ales|granola|flocons? d.avoine|gruau|muesli/i },
   { label: 'Pain',               icon: '🍞', pattern: /\bpain\b|baguette|bagel|pita|tortilla|naan|brioche|croissant/i },
-  { label: 'Alcool',             icon: '🍷', pattern: /\bvin\b|\bvins\b|bi[èe]re\b|spiritueux|whisky|vodka|\brhum\b|\bgin\b|\bcidre\b|\balcool|t[ée]quila|\bros[ée]\b|champagne|liqueur/i },
+  // exclude: évite les faux positifs où le mot-clé apparaît dans un produit
+  // qui n'est PAS de l'alcool — "vinaigre DE VIN", "jus de raisin À VIN" (mot
+  // "vin" isolé mais hors contexte), "rose" la couleur (ex: détergent,
+  // serviette) confondu avec "rosé" le vin faute d'accent dans le mot-clé, et
+  // "boisson gazeuse cola CHAMPAGNE" (une saveur de liqueur douce québécoise,
+  // pas du vrai champagne).
+  { label: 'Alcool',             icon: '🍷', pattern: /\bvin\b|\bvins\b|bi[èe]re\b|spiritueux|whisky|vodka|\brhum\b|\bgin\b|\bcidre\b|\balcool|t[ée]quila|\brosé\b|champagne|liqueur/i,
+    exclude: /vinaigre|raisin|cola champagne/i },
   { label: 'Bio',                icon: '🌿', pattern: /biologique|\bbio\b/i },
   { label: 'Surgelé',            icon: '❄️', pattern: /surgel[ée]|congel[ée]/i },
   { label: 'Collations',         icon: '🍿', pattern: /collation|croustille|craquelin|barre tendre|barre granola/i },
@@ -1667,7 +1674,7 @@ function buildTagPills(){
 function renderTagResults(label){
   const rule = TAG_RULES.find(t => t.label === label);
   const matches = (costcoCSV || [])
-    .filter(d => regionOk(d) && rule.pattern.test(d.name))
+    .filter(d => regionOk(d) && rule.pattern.test(d.name) && !(rule.exclude && rule.exclude.test(d.name)))
     .sort((a, b) => a.price - b.price)
     .slice(0, 40);
   renderFoundBox(rule.icon, rule.label, matches);
