@@ -8,6 +8,9 @@ export async function onRequest(context) {
   const url = new URL(request.url);
   const path = url.pathname.replace(/\/+$/, '') || '/';
 
+  // La liste d'accès ne doit jamais être téléchargeable.
+  if (path === '/acces.txt' || path === '/acces.csv') return new Response('Not found', { status: 404 });
+
   if (PUBLIC.has(path)) return next();
 
   if (!env.AUTH_KV || !env.SESSION_SECRET || !env.GOOGLE_CLIENT_ID || !env.ADMIN_EMAIL) {
@@ -15,7 +18,7 @@ export async function onRequest(context) {
   }
 
   const email = await readSession(env, request);
-  const ok = await isApproved(env, email); // vérifié à chaque requête : retirer quelqu'un coupe l'accès tout de suite
+  const ok = await isApproved(env, email, url.origin); // vérifié à chaque requête : retirer quelqu'un coupe l'accès tout de suite
 
   if (!ok) {
     if (path.startsWith('/api/')) return json({ error: 'non_autorise' }, 401);

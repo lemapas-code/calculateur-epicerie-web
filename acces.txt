@@ -1,0 +1,7 @@
+# Liste des personnes qui ont accès au calculateur.
+# Un courriel Google par ligne (ou colle une colonne exportée d'Excel).
+# Les lignes qui commencent par # sont ignorées.
+# Après une modification : git add -A, git commit -m "acces", git push origin main
+# (le changement est actif dans la minute qui suit le déploiement).
+#
+# exemple@gmail.com

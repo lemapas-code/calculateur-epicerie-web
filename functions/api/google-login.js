@@ -7,7 +7,7 @@ export async function onRequestPost({ request, env }) {
   const user = await verifyGoogleToken(env, body.credential);
   if (!user) return json({ error: 'jeton_invalide' }, 401);
 
-  if (await isApproved(env, user.email)) {
+  if (await isApproved(env, user.email, new URL(request.url).origin)) {
     const token = await makeSession(env, user.email);
     return json({ status: 'ok', email: user.email }, 200, { 'Set-Cookie': sessionCookie(token) });
   }

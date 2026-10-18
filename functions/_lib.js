@@ -55,10 +55,30 @@ export function isAdmin(env, email) {
   return !!email && normEmail(env.ADMIN_EMAIL) === email;
 }
 
-// Un utilisateur a accès s'il est l'admin ou approuvé dans la liste.
-export async function isApproved(env, email) {
+// Liste d'accès dans le fichier "acces.txt" du dépôt (un courriel par ligne, ou un CSV/colonne Excel exportée).
+// Le fichier n'est jamais servi au public (voir _middleware.js) ; on le lit ici en interne, avec un cache de 60 s.
+let fileCache = { at: 0, set: new Set() };
+export async function fileAllowlist(env, origin) {
+  if (Date.now() - fileCache.at < 60000) return fileCache.set;
+  const set = new Set();
+  try {
+    if (env.ASSETS) {
+      const r = await env.ASSETS.fetch(new Request(origin + '/acces.txt'));
+      if (r.ok) {
+        const text = (await r.text()).replace(/^#.*$/gm, '');          // lignes de commentaire
+        (text.match(/[^\s,;"'<>]+@[^\s,;"'<>]+\.[^\s,;"'<>]+/g) || []).forEach(e => set.add(normEmail(e)));
+      }
+    }
+  } catch {}
+  fileCache = { at: Date.now(), set };
+  return set;
+}
+
+// Un utilisateur a accès s'il est l'admin, dans acces.txt, ou approuvé via la page /admin.
+export async function isApproved(env, email, origin) {
   if (!email) return false;
   if (isAdmin(env, email)) return true;
+  if (origin && (await fileAllowlist(env, origin)).has(email)) return true;
   return (await env.AUTH_KV.get('user:' + email)) !== null;
 }
 
