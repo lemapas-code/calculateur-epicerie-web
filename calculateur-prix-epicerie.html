@@ -831,6 +831,8 @@ function clearTagSelection(){
 function clearCategorySelection(){
   activeCategoryFilter = null;
   document.querySelectorAll('#categoryPills .category-pill').forEach(p => p.classList.remove('active'));
+  const box = document.getElementById('tagResultsBox');
+  if(box) box.style.display = 'none';
 }
 
 // Région choisie par le visiteur pour voir les spéciaux propres à son secteur
@@ -1386,10 +1388,12 @@ function buildCategoryPills(){
       if(activeCategoryFilter === cat){
         activeCategoryFilter = null;
         el.classList.remove('active');
+        document.getElementById('tagResultsBox').style.display = 'none';
       } else {
         pillsBox.querySelectorAll('.category-pill').forEach(p => p.classList.remove('active'));
         activeCategoryFilter = cat;
         el.classList.add('active');
+        renderCategoryResults(cat);
       }
       // Changer de catégorie réinitialise la recherche en cours — un produit
       // sélectionné (ou du texte tapé) pour une autre catégorie n'a plus
@@ -1397,11 +1401,36 @@ function buildCategoryPills(){
       searchInput.value = '';
       selectedProduct = null;
       render();
-      renderResults(searchInput.value);
     });
   });
 }
 buildCategoryPills();
+
+// Boîte "prix trouvés" partagée entre les pastilles de catégorie et celles
+// d'étiquette — un seul des deux filtres est actif à la fois, donc une seule
+// boîte suffit.
+function renderFoundBox(icon, label, matches){
+  const listBox = document.getElementById('tagResultsList');
+  const emptyBox = document.getElementById('tagResultsEmpty');
+  const labelBox = document.getElementById('tagResultsLabel');
+  document.getElementById('tagResultsBox').style.display = 'block';
+  labelBox.textContent = `${icon} ${label} — ${matches.length} prix trouvés :`;
+  if(matches.length){
+    listBox.innerHTML = matches.map(priceItemHTML).join('');
+    emptyBox.style.display = 'none';
+  } else {
+    listBox.innerHTML = '';
+    emptyBox.style.display = 'block';
+  }
+}
+
+function renderCategoryResults(cat){
+  const matches = (costcoCSV || [])
+    .filter(d => regionOk(d) && d.cat === cat)
+    .sort((a, b) => a.price - b.price)
+    .slice(0, 40);
+  renderFoundBox(CATEGORY_ICONS[cat] || '🛍️', cat, matches);
+}
 
 // Étiquettes transversales (au-delà des 5 catégories) détectées par mot-clé
 // dans le nom du produit — un même produit peut porter plusieurs étiquettes.
@@ -1451,24 +1480,11 @@ function buildTagPills(){
 
 function renderTagResults(label){
   const rule = TAG_RULES.find(t => t.label === label);
-  const listBox = document.getElementById('tagResultsList');
-  const emptyBox = document.getElementById('tagResultsEmpty');
-  const labelBox = document.getElementById('tagResultsLabel');
-  document.getElementById('tagResultsBox').style.display = 'block';
-
   const matches = (costcoCSV || [])
-    .filter(d => rule.pattern.test(d.name))
+    .filter(d => regionOk(d) && rule.pattern.test(d.name))
     .sort((a, b) => a.price - b.price)
     .slice(0, 40);
-
-  labelBox.textContent = `${rule.icon} ${rule.label} — ${matches.length} prix trouvés :`;
-  if(matches.length){
-    listBox.innerHTML = matches.map(priceItemHTML).join('');
-    emptyBox.style.display = 'none';
-  } else {
-    listBox.innerHTML = '';
-    emptyBox.style.display = 'block';
-  }
+  renderFoundBox(rule.icon, rule.label, matches);
 }
 buildTagPills();
 </script>
