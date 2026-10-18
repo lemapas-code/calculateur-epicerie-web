@@ -36,8 +36,14 @@ export async function onRequest(context) {
     if (res.status >= 300 && res.status < 400 && res.headers.get('Location')) {
       res = await env.ASSETS.fetch(new Request(new URL(res.headers.get('Location'), asset), request));
     }
-    const out = new Response(res.body, res);
+    let out = new Response(res.body, res);
     out.headers.set('Cache-Control', 'private, no-store');
+    // Lien discret vers la gestion des accès, visible seulement pour l'administrateur.
+    if (isAdmin(env, email) && typeof HTMLRewriter !== 'undefined') {
+      out = new HTMLRewriter().on('body', { element(el) {
+        el.append('<a href="/admin" style="position:fixed;right:12px;top:12px;z-index:99999;background:#2f4a36;color:#fff;padding:8px 12px;border-radius:20px;font:600 13px system-ui,sans-serif;text-decoration:none;box-shadow:0 2px 8px rgba(0,0,0,.25)">🔑 Administration</a>', { html: true });
+      } }).transform(out);
+    }
     return out;
   }
   const res = await next();

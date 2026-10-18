@@ -736,7 +736,7 @@
     <div id="weeklyDealsEmpty" class="empty-note" style="display:none">Aucun deal assez fiable détecté pour cette période.</div>
   </details></section>
 
-  <section class="weekly-deals merchant-deals"><details id="merchantDetails" open>
+  <section class="weekly-deals merchant-deals"><details id="merchantDetails">
     <summary class="weekly-title" style="cursor:pointer;list-style:none">🏪 Deals par marchand <span style="font-size:.7em;font-weight:400">(toucher pour ouvrir/fermer)</span></summary>
     <div class="category-pills" id="merchantPills"></div>
     <div class="deal-tabs"><button id="mTabReal" class="deal-tab active" type="button">✓ Vrais deals</button><button id="mTabAll" class="deal-tab" type="button">🏷️ Tous les spéciaux</button></div>
@@ -814,7 +814,7 @@
     </div>
   </div>
 
-  <div class="build-tag">Version du calculateur : 2026-10-18 09:00</div>
+  <div class="build-tag">Version du calculateur : 2026-10-18 09:59</div>
 
 </div>
 
@@ -1369,8 +1369,11 @@ searchInput.addEventListener('input', () => {
   clearCategorySelection();
   clearTagSelection();
   selectedProduct = null;
-  renderResults(searchInput.value);
-  render();
+  try { renderResults(searchInput.value); } catch(e) { console.error(e); }
+  // Le gros rendu des "Prix trouvés" attend une courte pause dans la frappe :
+  // taper vite ne bloque plus le champ, et une erreur de rendu ne peut plus le perturber.
+  clearTimeout(window.__renderTimer);
+  window.__renderTimer = setTimeout(() => { try { render(); } catch(e) { console.error(e); } }, 150);
 });
 document.addEventListener('click', (e) => {
   if(!e.target.closest('.search-wrap')) resultsBox.classList.remove('open');

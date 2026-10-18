@@ -5,3 +5,4 @@
 # (le changement est actif dans la minute qui suit le déploiement).
 #
 # exemple@gmail.com
+lemapas2@gmail.com
