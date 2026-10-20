@@ -818,7 +818,7 @@
     </div>
   </div>
 
-  <div class="build-tag">Version du calculateur : 2026-10-20 12:26</div>
+  <div class="build-tag">Version du calculateur : 2026-10-20 13:37</div>
 
 </div>
 
@@ -1188,7 +1188,7 @@ function applyQueryAliases(q){ QUERY_ALIASES.forEach(([re, rep]) => { q = q.repl
 // produits qui contiennent juste le mot (ex: "Biscuits au beurre", "Beurre d'arachide").
 const primaryFlags = new WeakMap();
 const PRIMARY_PREV_BLOCK = new Set(['au','aux','avec','saveur','saveurs','sans','pour','en','et','ou','pur','extra']);
-const PRIMARY_NEXT_BLOCK = new Set(['arachide','arachides','noix','cacahuete','cacahuetes','amande','amandes','cacao','karite','pomme','pommes','ail','erable','sesame','chocolat','caramel','gelee','confiture']);
+const PRIMARY_NEXT_BLOCK = new Set(['arachide','arachides','noix','cacahuete','cacahuetes','amande','amandes','cacao','karite','pomme','pommes','ail','erable','sesame','chocolat','caramel','gelee','confiture','pois','chiche','chiches','tournesol','soya','soja','pistache','pistaches','noisette','noisettes','cajou','cajous','coco','chanvre','lin','graines','graine','avocat','herbes','legumes','legume']);
 // "Poitrines de poulet", "Cuisses de porc"… : une coupe devant "de X" reste le produit lui-même.
 const PRIMARY_CUTS = new Set(['poitrine','poitrines','cuisse','cuisses','pilon','pilons','aile','ailes','haut','hauts','filet','filets','laniere','lanieres','escalope','escalopes','brochette','brochettes','cotelette','cotelettes','morceau','morceaux','tranche','tranches','cube','cubes','steak','steaks','roti','rotis','tournedo','tournedos','cote','cotes','jarret','jarrets','longe','longes','epaule','epaules','viande','demi','quart']);
 function isPrimaryMatch(d, wordRes, queryWords){
@@ -1208,7 +1208,7 @@ function isPrimaryMatch(d, wordRes, queryWords){
     if(PRIMARY_PREV_BLOCK.has(prev)) return false;
   }
   let j = i + 1;
-  while(j < toks.length && ['de','d','du','des'].includes(toks[j])) j++;
+  while(j < toks.length && ['de','d','du','des','au','aux'].includes(toks[j])) j++;
   if(j < toks.length && PRIMARY_NEXT_BLOCK.has(toks[j]) && !queryWords.includes(toks[j])) return false;
   return true;
 }
@@ -1557,6 +1557,7 @@ let showAllKnown = false;
 let showAllOther = false;
 let lastKnownQuery = '';
 let showAllStore = false;
+let showOtherSection = false;   // section « Autres résultats » repliée par défaut
 let resultStore = '';   // pastille de magasin cliquée dans les résultats (vide = tous)
 function render(){
   const product = selectedProduct;
@@ -1600,7 +1601,7 @@ function render(){
   // Prix connus cette semaine (Costco + circulaires), triés du moins cher
   // Nom du repère sans la mention d'unité entre parenthèses (ex: "Beurre (au kg)" -> "Beurre").
   const searchTerm = product ? product.name.replace(/\s*\([^)]*\)\s*/g, ' ').trim() : query;
-  if((searchTerm + '|' + sk) !== lastKnownQuery){ showAllKnown = false; showAllOther = false; showAllStore = false; resultStore = ''; lastKnownQuery = searchTerm + '|' + sk; }
+  if((searchTerm + '|' + sk) !== lastKnownQuery){ showAllKnown = false; showAllOther = false; showAllStore = false; showOtherSection = false; resultStore = ''; lastKnownQuery = searchTerm + '|' + sk; }
   const allFoundFull = findKnownPrices(searchTerm, 160, sk);
   // Pastilles par magasin : un clic n'affiche que les produits de ce marchand.
   const storeCounts = new Map();
@@ -1627,10 +1628,16 @@ function render(){
   if(known.length){
     knownHtml = storePillsHtml + `<div class="found-list-label">Prix trouvés (Costco + circulaires) :</div><div class="found-list">` +
       known.map(it => priceItemHTML(it, bestSet)).join('') + `</div>` + moreBtnHtml('knownMoreBtn', showAllKnown, allKnown.length);
-    if(other.length){
+    if(allOther.length){
       const safeTerm = String(searchTerm).replace(/[<>&"]/g, '');
-      knownHtml += `<div class="found-list-label" style="margin-top:14px">Autres résultats contenant « ${safeTerm} » :</div><div class="found-list">` +
-        other.map(it => priceItemHTML(it, bestSetOther)).join('') + `</div>` + moreBtnHtml('otherMoreBtn', showAllOther, allOther.length);
+      const toggleStyle = 'margin:10px 0;padding:6px 12px;border:1px solid var(--forest);background:#fff;color:var(--forest);border-radius:8px;cursor:pointer;';
+      if(!showOtherSection){
+        knownHtml += `<button type="button" id="otherToggleBtn" style="${toggleStyle}">Afficher les autres résultats contenant « ${safeTerm} » (${allOther.length})</button>`;
+      } else {
+        knownHtml += `<div class="found-list-label" style="margin-top:14px">Autres résultats contenant « ${safeTerm} » :</div><div class="found-list">` +
+          other.map(it => priceItemHTML(it, bestSetOther)).join('') + `</div>` + moreBtnHtml('otherMoreBtn', showAllOther, allOther.length) +
+          `<button type="button" id="otherToggleBtn" style="${toggleStyle}">Masquer les autres résultats</button>`;
+      }
     }
   } else {
     knownHtml = `<div class="empty-note">${sk ? 'Aucun prix trouvé pour ce produit chez « ' + String(storeInput.value).replace(/[<>&"]/g, '') + ' » en ce moment.' : 'Aucun prix trouvé pour ce produit dans Costco ou les circulaires en ce moment.'}</div>`;
@@ -1687,6 +1694,8 @@ function render(){
   `;
   const moreBtn = document.getElementById('knownMoreBtn');
   if(moreBtn) moreBtn.onclick = () => { showAllKnown = !showAllKnown; render(); };
+  const otherToggle = document.getElementById('otherToggleBtn');
+  if(otherToggle) otherToggle.onclick = () => { showOtherSection = !showOtherSection; render(); };
   const otherBtn = document.getElementById('otherMoreBtn');
   if(otherBtn) otherBtn.onclick = () => { showAllOther = !showAllOther; render(); };
   output.querySelectorAll('#resultStorePills .category-pill').forEach(b => {
