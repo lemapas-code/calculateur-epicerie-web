@@ -818,7 +818,7 @@
     </div>
   </div>
 
-  <div class="build-tag">Version du calculateur : 2026-10-20 09:26</div>
+  <div class="build-tag">Version du calculateur : 2026-10-20 12:26</div>
 
 </div>
 
@@ -1615,10 +1615,13 @@ function render(){
   let allKnown = allFound.filter(it => primaryFlags.get(it));
   let allOther = allFound.filter(it => !primaryFlags.get(it));
   if(!allKnown.length){ allKnown = allOther; allOther = []; }   // rien de "principal" : tout dans la liste normale
-  const known = showAllKnown ? allKnown : allKnown.slice(0, 10);
-  const other = showAllOther ? allOther : allOther.slice(0, 10);
   const bestSet = bestUnitPriceSet(allKnown);
   const bestSetOther = bestUnitPriceSet(allOther);
+  // Les « 💰 Meilleur prix au kg/L » passent en tête de chaque liste ; le reste garde son ordre.
+  allKnown = allKnown.filter(it => bestSet.has(it)).concat(allKnown.filter(it => !bestSet.has(it)));
+  allOther = allOther.filter(it => bestSetOther.has(it)).concat(allOther.filter(it => !bestSetOther.has(it)));
+  const known = showAllKnown ? allKnown : allKnown.slice(0, 10);
+  const other = showAllOther ? allOther : allOther.slice(0, 10);
   const moreBtnHtml = (id, shown, total) => total > 10 ? `<button type="button" id="${id}" style="margin:8px 0;padding:6px 12px;border:1px solid var(--forest);background:#fff;color:var(--forest);border-radius:8px;cursor:pointer;">${shown ? 'Voir moins' : 'Voir plus (' + (total - 10) + ' autres)'}</button>` : '';
   let knownHtml = '';
   if(known.length){
