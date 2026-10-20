@@ -818,7 +818,7 @@
     </div>
   </div>
 
-  <div class="build-tag">Version du calculateur : 2026-10-20 07:41</div>
+  <div class="build-tag">Version du calculateur : 2026-10-20 09:26</div>
 
 </div>
 
@@ -1557,6 +1557,7 @@ let showAllKnown = false;
 let showAllOther = false;
 let lastKnownQuery = '';
 let showAllStore = false;
+let resultStore = '';   // pastille de magasin cliquée dans les résultats (vide = tous)
 function render(){
   const product = selectedProduct;
   const query = searchInput.value.trim();
@@ -1599,8 +1600,18 @@ function render(){
   // Prix connus cette semaine (Costco + circulaires), triés du moins cher
   // Nom du repère sans la mention d'unité entre parenthèses (ex: "Beurre (au kg)" -> "Beurre").
   const searchTerm = product ? product.name.replace(/\s*\([^)]*\)\s*/g, ' ').trim() : query;
-  if((searchTerm + '|' + sk) !== lastKnownQuery){ showAllKnown = false; showAllOther = false; showAllStore = false; lastKnownQuery = searchTerm + '|' + sk; }
-  const allFound = findKnownPrices(searchTerm, 160, sk);
+  if((searchTerm + '|' + sk) !== lastKnownQuery){ showAllKnown = false; showAllOther = false; showAllStore = false; resultStore = ''; lastKnownQuery = searchTerm + '|' + sk; }
+  const allFoundFull = findKnownPrices(searchTerm, 160, sk);
+  // Pastilles par magasin : un clic n'affiche que les produits de ce marchand.
+  const storeCounts = new Map();
+  allFoundFull.forEach(it => { const st = splitStoreFromName(it.name, it.store).store; storeCounts.set(st, (storeCounts.get(st) || 0) + 1); });
+  if(resultStore && !storeCounts.has(resultStore)) resultStore = '';
+  const allFound = resultStore ? allFoundFull.filter(it => splitStoreFromName(it.name, it.store).store === resultStore) : allFoundFull;
+  const storePillsHtml = storeCounts.size >= 2
+    ? `<div class="category-pills" id="resultStorePills" style="margin:6px 0 10px"><button type="button" class="category-pill${resultStore ? '' : ' active'}" data-store="">Tous (${allFoundFull.length})</button>` +
+      Array.from(storeCounts.entries()).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], 'fr')).map(([st, n]) =>
+        `<button type="button" class="category-pill${resultStore === st ? ' active' : ''}" data-store="${encodeURIComponent(st)}">${String(st).replace(/[<>&"]/g, '')} (${n})</button>`).join('') + `</div>`
+    : '';
   let allKnown = allFound.filter(it => primaryFlags.get(it));
   let allOther = allFound.filter(it => !primaryFlags.get(it));
   if(!allKnown.length){ allKnown = allOther; allOther = []; }   // rien de "principal" : tout dans la liste normale
@@ -1611,7 +1622,7 @@ function render(){
   const moreBtnHtml = (id, shown, total) => total > 10 ? `<button type="button" id="${id}" style="margin:8px 0;padding:6px 12px;border:1px solid var(--forest);background:#fff;color:var(--forest);border-radius:8px;cursor:pointer;">${shown ? 'Voir moins' : 'Voir plus (' + (total - 10) + ' autres)'}</button>` : '';
   let knownHtml = '';
   if(known.length){
-    knownHtml = `<div class="found-list-label">Prix trouvés (Costco + circulaires) :</div><div class="found-list">` +
+    knownHtml = storePillsHtml + `<div class="found-list-label">Prix trouvés (Costco + circulaires) :</div><div class="found-list">` +
       known.map(it => priceItemHTML(it, bestSet)).join('') + `</div>` + moreBtnHtml('knownMoreBtn', showAllKnown, allKnown.length);
     if(other.length){
       const safeTerm = String(searchTerm).replace(/[<>&"]/g, '');
@@ -1675,6 +1686,9 @@ function render(){
   if(moreBtn) moreBtn.onclick = () => { showAllKnown = !showAllKnown; render(); };
   const otherBtn = document.getElementById('otherMoreBtn');
   if(otherBtn) otherBtn.onclick = () => { showAllOther = !showAllOther; render(); };
+  output.querySelectorAll('#resultStorePills .category-pill').forEach(b => {
+    b.onclick = () => { resultStore = decodeURIComponent(b.getAttribute('data-store') || ''); showAllKnown = false; showAllOther = false; render(); };
+  });
 }
 
 [priceInput, qtyInput, unitSel].forEach(el => el.addEventListener('input', render));
