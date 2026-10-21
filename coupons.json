@@ -3,10 +3,271 @@
     "exemple": true,
     "titre": "EXEMPLE - Beurre Lactantia 454 g",
     "mots": "beurre lactantia",
-    "valeur": 1.00,
+    "valeur": 1.0,
     "expire": "2026-11-30",
     "magasin": "",
     "lien": "",
     "note": "Save.ca"
+  },
+  {
+    "titre": "Cabral any Cabral olive oil, any size, when you also purchase California Walnuts",
+    "mots": "Cabral huile",
+    "valeur": 5.0,
+    "expire": "2026-11-01",
+    "magasin": "",
+    "lien": "https://www.gocoupons.ca/coupons/412",
+    "note": "GoCoupons (remise en argent, compte + facture requis) - IGA QC, Metro Qc, Sobeys, Metro ON"
+  },
+  {
+    "titre": "Mie et Cie two (2) Mie et Cie loaves",
+    "mots": "Mie Cie pain",
+    "valeur": 4.0,
+    "expire": "2027-05-31",
+    "magasin": "",
+    "lien": "https://www.gocoupons.ca/coupons/415",
+    "note": "GoCoupons (remise en argent, compte + facture requis) - Metro Qc, Walmart, Provigo, Maxi, Giant Tiger"
+  },
+  {
+    "titre": "Cabral one Cabral olive oil, any size.",
+    "mots": "Cabral huile",
+    "valeur": 3.0,
+    "expire": "2027-12-31",
+    "magasin": "",
+    "lien": "https://www.gocoupons.ca/coupons/413",
+    "note": "GoCoupons (remise en argent, compte + facture requis) - IGA QC, Metro Qc, Sobeys, Metro ON"
+  },
+  {
+    "titre": "Monari any Monari balsamic vinegar product when you also purchase California Walnuts",
+    "mots": "Monari",
+    "valeur": 3.0,
+    "expire": "2026-11-01",
+    "magasin": "",
+    "lien": "https://www.gocoupons.ca/coupons/411",
+    "note": "GoCoupons (remise en argent, compte + facture requis) - IGA QC, Metro Qc, Adonis, Marché Tradition, IGA Marketplace, Farm Boy, Bonichoix, Intermarché"
+  },
+  {
+    "titre": "Benefiber Benefiber Prebiotic Dietary Fibre Powder (248 g)",
+    "mots": "Benefiber",
+    "valeur": 3.0,
+    "expire": "2026-12-31",
+    "magasin": "",
+    "lien": "https://www.gocoupons.ca/coupons/368",
+    "note": "GoCoupons (remise en argent, compte + facture requis) - All major retailers"
+  },
+  {
+    "titre": "Exceldor an Exceldor fresh chicken product",
+    "mots": "Exceldor poulet",
+    "valeur": 3.0,
+    "expire": "2026-12-31",
+    "magasin": "",
+    "lien": "https://www.gocoupons.ca/coupons/365",
+    "note": "GoCoupons (remise en argent, compte + facture requis) - IGA QC, Metro Qc, Super C, Pasquier"
+  },
+  {
+    "titre": "Lily & Jax Lily & Jax dog food salmon or lamb",
+    "mots": "Lily Jax",
+    "valeur": 3.0,
+    "expire": "2026-12-31",
+    "magasin": "",
+    "lien": "https://www.gocoupons.ca/coupons/51",
+    "note": "GoCoupons (remise en argent, compte + facture requis) - IGA QC, Metro Qc, Super C, Provigo, BMR"
+  },
+  {
+    "titre": "Lily & Jax Lily & Jax dog food fresh turkey",
+    "mots": "Lily Jax",
+    "valeur": 3.0,
+    "expire": "2026-12-31",
+    "magasin": "",
+    "lien": "https://www.gocoupons.ca/coupons/51",
+    "note": "GoCoupons (remise en argent, compte + facture requis) - IGA QC, Metro Qc, Super C, Provigo, BMR"
+  },
+  {
+    "titre": "Lily & Jax Lily & Jax cat food fresh salmon",
+    "mots": "Lily Jax",
+    "valeur": 3.0,
+    "expire": "2026-12-31",
+    "magasin": "",
+    "lien": "https://www.gocoupons.ca/coupons/51",
+    "note": "GoCoupons (remise en argent, compte + facture requis) - IGA QC, Metro Qc, Super C, Provigo, BMR"
+  },
+  {
+    "titre": "Lily & Jax Lily & Jax cat food turkey or duck",
+    "mots": "Lily Jax",
+    "valeur": 3.0,
+    "expire": "2026-12-31",
+    "magasin": "",
+    "lien": "https://www.gocoupons.ca/coupons/51",
+    "note": "GoCoupons (remise en argent, compte + facture requis) - IGA QC, Metro Qc, Super C, Provigo, BMR"
+  },
+  {
+    "titre": "Cascades Cascades Fluff Excellence 12 or 24 rolls",
+    "mots": "Cascades hygienique",
+    "valeur": 2.0,
+    "expire": "2026-12-31",
+    "magasin": "",
+    "lien": "https://www.gocoupons.ca/coupons/406",
+    "note": "GoCoupons (remise en argent, compte + facture requis) - All major retailers"
+  },
+  {
+    "titre": "Beaurivage Beaurivage maple syrup when you also purchase California Walnuts",
+    "mots": "Beaurivage",
+    "valeur": 2.0,
+    "expire": "2026-11-01",
+    "magasin": "",
+    "lien": "https://www.gocoupons.ca/coupons/409",
+    "note": "GoCoupons (remise en argent, compte + facture requis) - IGA QC"
+  },
+  {
+    "titre": "Various blue cheese when you also purchase California Walnuts",
+    "mots": "Various",
+    "valeur": 2.0,
+    "expire": "2026-11-01",
+    "magasin": "",
+    "lien": "https://www.gocoupons.ca/coupons/408",
+    "note": "GoCoupons (remise en argent, compte + facture requis) - All major retailers"
+  },
+  {
+    "titre": "Le Saunier de Camargue Fleur de Sel Le Saunier de Camargue 125g when you also purchase California Walnuts",
+    "mots": "Le Saunier de Camargue",
+    "valeur": 2.0,
+    "expire": "2026-11-01",
+    "magasin": "",
+    "lien": "https://www.gocoupons.ca/coupons/410",
+    "note": "GoCoupons (remise en argent, compte + facture requis) - All major retailers"
+  },
+  {
+    "titre": "Natural Delights Bard Valley Natural Delights Medjool dates",
+    "mots": "Natural Delights",
+    "valeur": 2.0,
+    "expire": "2026-12-31",
+    "magasin": "",
+    "lien": "https://www.gocoupons.ca/coupons/398",
+    "note": "GoCoupons (remise en argent, compte + facture requis) - All major retailers"
+  },
+  {
+    "titre": "Stefano Faita Stefano wine or Spritz Aperitivo",
+    "mots": "Stefano Faita",
+    "valeur": 2.0,
+    "expire": "2026-12-31",
+    "magasin": "",
+    "lien": "https://www.gocoupons.ca/coupons/399",
+    "note": "GoCoupons (remise en argent, compte + facture requis) - All major retailers"
+  },
+  {
+    "titre": "Maille Maille gherkins",
+    "mots": "Maille cornichon",
+    "valeur": 2.0,
+    "expire": "2026-12-31",
+    "magasin": "",
+    "lien": "https://www.gocoupons.ca/coupons/396",
+    "note": "GoCoupons (remise en argent, compte + facture requis) - All major retailers"
+  },
+  {
+    "titre": "Fontaine Family a Grain-fed Aged Veal Chop or a tray of Grain-fed Veal Shanks (Osso Buco) Fontaine Family",
+    "mots": "Fontaine Family",
+    "valeur": 2.0,
+    "expire": "2026-12-31",
+    "magasin": "",
+    "lien": "https://www.gocoupons.ca/coupons/347",
+    "note": "GoCoupons (remise en argent, compte + facture requis) - IGA QC, Metro Qc, Super C, Provigo, Maxi"
+  },
+  {
+    "titre": "Vegpro one Fresh Attitude family-size salad kit",
+    "mots": "Vegpro",
+    "valeur": 2.0,
+    "expire": "2026-12-31",
+    "magasin": "",
+    "lien": "https://www.gocoupons.ca/coupons/344",
+    "note": "GoCoupons (remise en argent, compte + facture requis) - All major retailers"
+  },
+  {
+    "titre": "Mie et Cie one (1) Mie et Cie loaf",
+    "mots": "Mie Cie pain",
+    "valeur": 1.5,
+    "expire": "2027-05-31",
+    "magasin": "",
+    "lien": "https://www.gocoupons.ca/coupons/414",
+    "note": "GoCoupons (remise en argent, compte + facture requis) - Metro Qc, Walmart, Provigo, Maxi, Giant Tiger"
+  },
+  {
+    "titre": "Yoplait Yoplait Skyr yogurt",
+    "mots": "Yoplait skyr",
+    "valeur": 1.0,
+    "expire": "2026-11-14",
+    "magasin": "",
+    "lien": "https://www.gocoupons.ca/coupons/405",
+    "note": "GoCoupons (remise en argent, compte + facture requis) - All major retailers"
+  },
+  {
+    "titre": "Various dried cranberries when you also purchase California Walnuts",
+    "mots": "Various",
+    "valeur": 1.0,
+    "expire": "2026-11-01",
+    "magasin": "",
+    "lien": "https://www.gocoupons.ca/coupons/407",
+    "note": "GoCoupons (remise en argent, compte + facture requis) - All major retailers"
+  },
+  {
+    "titre": "La Souche of 2 Jackie Dunn, Session IPA",
+    "mots": "La Souche",
+    "valeur": 1.0,
+    "expire": "2026-12-31",
+    "magasin": "",
+    "lien": "https://www.gocoupons.ca/coupons/345",
+    "note": "GoCoupons (remise en argent, compte + facture requis) - IGA QC, Metro Qc, Provigo, Maxi, Marché Express"
+  },
+  {
+    "titre": "Le Grand one Le Grand pesto olives and jalapeños",
+    "mots": "Le Grand",
+    "valeur": 1.0,
+    "expire": "2026-12-31",
+    "magasin": "",
+    "lien": "https://www.gocoupons.ca/coupons/342",
+    "note": "GoCoupons (remise en argent, compte + facture requis) - IGA QC, Metro Qc, Super C, Provigo, Loblaws, Maxi, Sobeys, Pasquier, Metro ON, Avril, Tau, La Moisson"
+  },
+  {
+    "titre": "Le Grand one Le Grand Mac 'N Cheeze sauce",
+    "mots": "Le Grand",
+    "valeur": 1.0,
+    "expire": "2026-12-31",
+    "magasin": "",
+    "lien": "https://www.gocoupons.ca/coupons/343",
+    "note": "GoCoupons (remise en argent, compte + facture requis) - IGA QC, Metro Qc, Super C, Provigo, Loblaws, Maxi, Sobeys, Pasquier, Metro ON, Avril, Tau, La Moisson, La boite à Grains, Aubut, Valmont"
+  },
+  {
+    "titre": "Morille Québec a box of Morille Quebec dried mushrooms 14g or 95g",
+    "mots": "Morille Québec",
+    "valeur": 1.0,
+    "expire": "2026-12-31",
+    "magasin": "",
+    "lien": "https://www.gocoupons.ca/coupons/266",
+    "note": "GoCoupons (remise en argent, compte + facture requis) - IGA QC, Maxi"
+  },
+  {
+    "titre": "GoGo Quinoa any flavor of GoGo Quinoa cereals",
+    "mots": "GoGo Quinoa",
+    "valeur": 1.0,
+    "expire": "2026-12-31",
+    "magasin": "",
+    "lien": "https://www.gocoupons.ca/coupons/260",
+    "note": "GoCoupons (remise en argent, compte + facture requis) - All major retailers"
+  },
+  {
+    "titre": "GoGo Quinoa one box of GoGo Quinoa vegan cheese pasta",
+    "mots": "GoGo Quinoa",
+    "valeur": 1.0,
+    "expire": "2026-12-31",
+    "magasin": "",
+    "lien": "https://www.gocoupons.ca/coupons/212",
+    "note": "GoCoupons (remise en argent, compte + facture requis) - All major retailers"
+  },
+  {
+    "titre": "Rougemont any chilled Rougemont 1.54 L product",
+    "mots": "Rougemont",
+    "valeur": 0.5,
+    "expire": "2026-12-31",
+    "magasin": "",
+    "lien": "https://www.gocoupons.ca/coupons/177",
+    "note": "GoCoupons (remise en argent, compte + facture requis) - IGA QC, Metro Qc, Provigo"
   }
 ]
