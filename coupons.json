@@ -19,6 +19,15 @@
     "note": "GoCoupons (remise en argent, compte + facture requis) - Metro Qc, Walmart, Provigo, Maxi, Tigre Géant"
   },
   {
+    "titre": "Monari d'un produit de vinaigre balsamique Monari",
+    "mots": "Monari",
+    "valeur": 3.0,
+    "expire": "2027-03-31",
+    "magasin": "",
+    "lien": "https://www.gocoupons.ca/coupons/420",
+    "note": "GoCoupons (remise en argent, compte + facture requis) - IGA QC, Metro Qc, Adonis, Marché Tradition, IGA Marketplace, Farm Boy, Bonichoix, Intermarché"
+  },
+  {
     "titre": "Cabral d'une huile d'olive Cabral, tout format.",
     "mots": "Cabral huile",
     "valeur": 3.0,
@@ -80,6 +89,24 @@
     "magasin": "",
     "lien": "https://www.gocoupons.ca/coupons/51",
     "note": "GoCoupons (remise en argent, compte + facture requis) - IGA QC, Metro Qc, Super C, Provigo, BMR"
+  },
+  {
+    "titre": "Le Saunier de Camargue de la Fleur de Sel Le Saunier de Camargue 125g",
+    "mots": "Le Saunier de Camargue",
+    "valeur": 2.0,
+    "expire": "2027-03-31",
+    "magasin": "",
+    "lien": "https://www.gocoupons.ca/coupons/419",
+    "note": "GoCoupons (remise en argent, compte + facture requis) - Tous les détaillants majeurs"
+  },
+  {
+    "titre": "Beaurivage de sirop d'érable Beaurivage",
+    "mots": "Beaurivage",
+    "valeur": 2.0,
+    "expire": "2027-03-31",
+    "magasin": "",
+    "lien": "https://www.gocoupons.ca/coupons/418",
+    "note": "GoCoupons (remise en argent, compte + facture requis) - IGA QC"
   },
   {
     "titre": "Cascades de papier hygiénique Cascades Fluff Excellence 12 ou 24 rouleaux",
