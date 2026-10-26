@@ -852,7 +852,7 @@
     </div>
   </div>
 
-  <div class="build-tag">Version du calculateur : 2026-10-26 13:25</div>
+  <div class="build-tag">Version du calculateur : 2026-10-26 13:40</div>
 
 </div>
 
@@ -1447,8 +1447,10 @@ function findKnownPrices(name, limit, storeK){
       });
       if(!anyHead) continue;
     }
-    if(matchCount > 0){ scored.push({ item: d, matchCount }); primaryFlags.set(d, isPrimaryMatch(d, wordRes, queryWords)); }
+    if(matchCount > 0){ scored.push({ item: d, matchCount, missQual: wordRes.some((re, wi) => QUERY_QUALIFIERS.has(queryWords[wi]) && !re.test(n)) }); primaryFlags.set(d, isPrimaryMatch(d, wordRes, queryWords)); }
   }
+  // « poulet entier » : si des items contiennent AUSSI le qualificatif (entier, frais, moulu…), on écarte ceux qui ne l'ont pas (ailes, simili…).
+  if(hasStrongWord && scored.some(x => !x.missQual) && scored.some(x => x.missQual)){ for(let k = scored.length - 1; k >= 0; k--){ if(scored[k].missQual) scored.splice(k, 1); } }
   const isDeal = it => (it.realDeal && it.avgPrice !== undefined) || (it.medianPrice !== undefined && ['exceptional','very_good','good'].includes(it.dealLevel)) ? 1 : 0;
   scored.sort((a, b) => b.matchCount - a.matchCount || isDeal(b.item) - isDeal(a.item) || a.item.price - b.item.price);
   return scored.map(s => s.item).slice(0, limit || 5);
