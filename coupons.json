@@ -91,6 +91,15 @@
     "note": "GoCoupons (remise en argent, compte + facture requis) - IGA QC, Metro Qc, Super C, Provigo, BMR"
   },
   {
+    "titre": "Cordon Bleu de 2 sauces en sachet Cordon Bleu",
+    "mots": "Cordon Bleu",
+    "valeur": 2.5,
+    "expire": "2027-12-31",
+    "magasin": "",
+    "lien": "https://www.gocoupons.ca/coupons/417",
+    "note": "GoCoupons (remise en argent, compte + facture requis) - IGA QC, Walmart, Maxi"
+  },
+  {
     "titre": "Le Saunier de Camargue de la Fleur de Sel Le Saunier de Camargue 125g",
     "mots": "Le Saunier de Camargue",
     "valeur": 2.0,
@@ -170,6 +179,15 @@
     "magasin": "",
     "lien": "https://www.gocoupons.ca/coupons/414",
     "note": "GoCoupons (remise en argent, compte + facture requis) - Metro Qc, Walmart, Provigo, Maxi, Tigre Géant"
+  },
+  {
+    "titre": "Cordon Bleu d'une sauce en sachet Cordon Bleu",
+    "mots": "Cordon Bleu",
+    "valeur": 1.0,
+    "expire": "2027-12-31",
+    "magasin": "",
+    "lien": "https://www.gocoupons.ca/coupons/416",
+    "note": "GoCoupons (remise en argent, compte + facture requis) - IGA QC, Walmart, Maxi"
   },
   {
     "titre": "Yoplait de yogourt Yoplait Skyr",
