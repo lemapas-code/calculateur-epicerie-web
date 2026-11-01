@@ -859,7 +859,7 @@
     </div>
   </div>
 
-  <div class="build-tag">Version du calculateur : 2026-11-01 08:30</div>
+  <div class="build-tag">Version du calculateur : 2026-11-01 08:40</div>
 
 </div>
 
@@ -2246,6 +2246,7 @@ function parseOCR(raw){
     if(ln.length < 5 || ln.length > 80 || letters / ln.length < 0.6) continue;
     if(SKIP.test(ln) && letters / ln.length < 0.85) continue;
     if(/^(?:prix|total|quantit|description)/i.test(ln)) continue;
+    if(/^(?:produit maison|s[ée]lection|irr[ée]sistibles?|compliments|great value|pc|mieux.?[eê]tre|signature|marque [a-z]+|boucherie|poissonnerie|boulangerie|p[âa]tisserie|d[ée]lices? du march[ée]|faites vite.*|nouveau|produit congel[ée]|rabais|promo(?:tion)?)$/i.test(ln.replace(/[^A-Za-zÀ-ÿ' -]/g,'').trim())) continue;
     name = ln.replace(/\b\d+(?:[.,]\d+)?\s*(kg|g|ml|l|lb|oz)\b/gi, '').replace(/\b\d+\s*[x×]\s*\d*/gi, '').replace(/[^\wÀ-ÿŒœ'’\- ,]/g, ' ').replace(/\s+/g, ' ').trim();
     if(name.length >= 4) break; else name = '';
   }
