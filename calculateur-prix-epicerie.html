@@ -859,7 +859,7 @@
     </div>
   </div>
 
-  <div class="build-tag">Version du calculateur : 2026-11-01 09:00</div>
+  <div class="build-tag">Version du calculateur : 2026-11-01 09:30</div>
 
 </div>
 
@@ -2162,7 +2162,7 @@ function parseOCR(raw){
   const text = String(raw || '').replace(/[|¦]/g, ' ').replace(/ /g, ' ');
   const lines = text.split(/\n+/).map(l => l.replace(/\s+/g, ' ').trim()).filter(Boolean);
   const num = s => parseFloat(String(s).replace(',', '.').replace(/\s/g, ''));
-  const NOISE = /(sauvez|economi|économi|rabais|r[ée]gulier|r[ée]g\.|habituel|avant\s|jusqu|valide|offre|limite|carte|points?|panier|ajouter|quantit|livraison|disponible)/i;
+  const NOISE = /(original|sauvez|economi|économi|rabais|r[ée]gulier|r[ée]g\.|habituel|avant\s|jusqu|valide|offre|limite|carte|points?|panier|ajouter|quantit|livraison|disponible)/i;
   // ---- Prix ----
   const cands = [];
   lines.forEach((ln, li) => {
@@ -2239,7 +2239,7 @@ function parseOCR(raw){
   }
   if(main && main.multi && qty) qty = qty * main.multi;
   // ---- Nom : première ligne « de vrais mots » ----
-  let name = '';
+  let name = '', seenBrand = false;
   const SKIP = /(\$|€|^\d|sauvez|economi|rabais|jusqu|valide|offre|ajouter|panier|\bpoints?\b|www|http|\.ca\b|\.com\b)/i;
   for(const ln of lines){
     const letters = (ln.match(/[A-Za-zÀ-ÿŒœ]/g) || []).length;
@@ -2247,6 +2247,7 @@ function parseOCR(raw){
     if(SKIP.test(ln) && letters / ln.length < 0.85) continue;
     if(/^(?:prix|total|quantit|description)/i.test(ln)) continue;
     if(/^(?:produit maison|s[ée]lection|irr[ée]sistibles?|compliments|great value|pc|mieux.?[eê]tre|signature|marque [a-z]+|boucherie|poissonnerie|boulangerie|p[âa]tisserie|d[ée]lices? du march[ée]|faites vite.*|nouveau|produit congel[ée]|rabais|promo(?:tion)?)$/i.test(ln.replace(/[^A-Za-zÀ-ÿ' -]/g,'').trim())) continue;
+    if(!/\s/.test(ln.trim()) && !seenBrand){ seenBrand = true; continue; }   // une seule mot (marque : « Lafleur ») -> on prend la ligne suivante
     name = ln.replace(/\b\d+(?:[.,]\d+)?\s*(kg|g|ml|l|lb|oz)\b/gi, '').replace(/\b\d+\s*[x×]\s*\d*/gi, '').replace(/[^\wÀ-ÿŒœ'’\- ,]/g, ' ').replace(/\s+/g, ' ').trim();
     if(name.length >= 4) break; else name = '';
   }
@@ -2314,7 +2315,23 @@ function parseOCR(raw){
           st.style.color = ppk <= sp.deal ? '#1b6b2a' : (ppk <= sp.high ? 'inherit' : '#a33');
         }
       } catch(e) {}
-      if(r.name && !repere) setStatus(st.textContent + ' (pas de repère de prix pour ce produit : compare avec les prix trouvés plus bas)');
+      if(r.name && !repere){
+        // Pas de repère : on compare au prix au kg des spéciaux trouvés (circulaires + Costco)
+        try {
+          const kgPrice = r.price / toKg(r.qty, unitSel.value);
+          const found = findKnownPrices(r.name, 60, '').filter(it => it.unit === 'kg' && it.price > 0 && regionOk(it));
+          if(r.price > 0 && r.qty > 0 && found.length){
+            const lower = found.filter(it => it.price < kgPrice).length;
+            const best = found.reduce((a, b2) => b2.price < a.price ? b2 : a);
+            const bs = splitStoreFromName(best.name, best.store).store;
+            const verdict = lower === 0 ? '✓ MOINS CHER que tous les prix trouvés' : (lower <= found.length * 0.25 ? 'plutôt bon (parmi les moins chers)' : (lower >= found.length * 0.75 ? 'plutôt cher' : 'dans la moyenne'));
+            setStatus(st.textContent + ' → ' + fmt(kgPrice) + ' $/kg : ' + verdict + ' — ' + lower + ' des ' + found.length + ' prix trouvés sont plus bas (le plus bas : ' + fmt(best.price) + ' $/kg chez ' + bs + ').');
+            st.style.color = lower === 0 ? '#1b6b2a' : (lower >= found.length * 0.75 ? '#a33' : 'inherit');
+          } else {
+            setStatus(st.textContent + ' (pas de repère de prix pour ce produit : compare avec les prix trouvés plus bas)');
+          }
+        } catch(e) { setStatus(st.textContent + ' (compare avec les prix trouvés plus bas)'); }
+      }
       const miss = []; if(r.price == null) miss.push('le prix'); if(r.qty == null) miss.push('le format');
       if(miss.length) setStatus(st.textContent + ' (je n’ai pas trouvé ' + miss.join(' ni ') + ' : remplis-le à la main)');
     } catch(e) {
