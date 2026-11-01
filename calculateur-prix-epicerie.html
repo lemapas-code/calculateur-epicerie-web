@@ -859,7 +859,7 @@
     </div>
   </div>
 
-  <div class="build-tag">Version du calculateur : 2026-11-01 08:40</div>
+  <div class="build-tag">Version du calculateur : 2026-11-01 09:00</div>
 
 </div>
 
@@ -2285,16 +2285,36 @@ function parseOCR(raw){
       const r = parseOCR(data.text);
       rawTxt.textContent = data.text; raw.style.display = 'block';
       if(r.price == null && !r.name){ setStatus('Je n’ai rien trouvé de lisible — essaie une capture plus nette ou plus zoomée.', true); return; }
+      const ps = document.getElementById('productSearch');
+      let repere = false;
+      if(r.name){
+        ps.value = r.name; ps.dispatchEvent(new Event('input', {bubbles: true}));
+        // Sélectionne le produit de référence correspondant (c'est lui qui permet de dire « bon deal » ou non)
+        const its = [...document.querySelectorAll('#productResults .item')];
+        const nq = normalize(r.name);
+        const best = its.find(el => normalize(el.getAttribute('data-name')) === nq) || its.find(el => normalize(el.getAttribute('data-name')).includes(nq) || nq.includes(normalize(el.getAttribute('data-name')))) || its[0];
+        if(best){ best.click(); repere = true; }
+      }
       if(r.price != null) priceInput.value = r.price;
       if(r.qty != null){ qtyInput.value = r.qty; if([...unitSel.options].some(o => o.value === r.unit)) unitSel.value = r.unit; }
-      const ps = document.getElementById('productSearch');
-      if(r.name){ ps.value = r.name; ps.dispatchEvent(new Event('input', {bubbles: true})); }
       [priceInput, qtyInput, unitSel].forEach(el => el.dispatchEvent(new Event('input', {bubbles: true})));
       const bits = [];
       if(r.name) bits.push('« ' + r.name + ' »');
       if(r.price != null) bits.push(fmt(r.price) + ' $' + (r.multi ? ' (lot de ' + r.multi + ')' : ''));
       if(r.qty != null) bits.push(fmt(r.qty) + ' ' + r.unit);
       setStatus('✓ Lu : ' + bits.join(' · ') + ' — vérifie les champs ci-dessous.');
+      // Verdict tout de suite, à côté de la lecture
+      try {
+        const sp = selectedProduct;
+        if(sp && sp.low !== undefined && r.price > 0 && r.qty > 0){
+          const ppk = r.price / toKg(r.qty, unitSel.value);
+          const lab = sp.unit === 'egg' ? 'douzaine' : (sp.unit === 'un' ? 'unité' : 'kg');
+          const v = ppk <= sp.deal ? '✓ BON DEAL' : (ppk <= sp.high ? 'PRIX RÉGULIER' : 'PRIX ÉLEVÉ');
+          setStatus(st.textContent + ' → ' + v + ' : ' + fmt(ppk) + ' $/' + lab + ' (bon deal sous ' + sp.deal + ' $/' + lab + ', habituel ' + sp.low + '–' + sp.high + ')');
+          st.style.color = ppk <= sp.deal ? '#1b6b2a' : (ppk <= sp.high ? 'inherit' : '#a33');
+        }
+      } catch(e) {}
+      if(r.name && !repere) setStatus(st.textContent + ' (pas de repère de prix pour ce produit : compare avec les prix trouvés plus bas)');
       const miss = []; if(r.price == null) miss.push('le prix'); if(r.qty == null) miss.push('le format');
       if(miss.length) setStatus(st.textContent + ' (je n’ai pas trouvé ' + miss.join(' ni ') + ' : remplis-le à la main)');
     } catch(e) {
