@@ -828,6 +828,7 @@
     </div>
   </div>
 
+  <div id="ppkLive" style="margin:6px 0 2px;font-size:1.05rem;font-weight:700;color:var(--forest)"></div>
   <div id="output"></div>
 
   <div class="flyers-section">
@@ -859,7 +860,7 @@
     </div>
   </div>
 
-  <div class="build-tag">Version du calculateur : 2026-11-01 09:30</div>
+  <div class="build-tag">Version du calculateur : 2026-11-01 19:50</div>
 
 </div>
 
@@ -1184,6 +1185,23 @@ function wireShareBlock(box){
     try { await navigator.clipboard.writeText(link); msg.textContent = '✓ Lien copié'; }
     catch(e) { window.prompt('Copie ce lien :', link); }
   };
+}
+// Produits « de la même famille » qu'un nom (jambon forêt noire, beurre d'arachide…) pour comparer des prix honnêtement.
+// 1) tous les mots du nom ; 2) à défaut, le produit de base + au moins un autre mot ; 3) (option) le produit de base seul.
+function familyItems(name, items, allowHeadOnly){
+  const STOP = new Set(['de','du','des','la','le','les','au','aux','et','ou','en','pour','sans','avec','un','une','marque','maison','choix','varie','varies','format','familial','famille','bio','biologique','frais','fraiche','vrac','club']);
+  const stem = w => (w.length > 4 ? w.replace(/(es|e|s)$/, '') : w);
+  const has = (nm, w) => new RegExp('\\b' + stem(w)).test(nm);
+  const ws = normalize(name).split(/[^a-z0-9]+/).filter(w => w.length >= 3 && !STOP.has(w));
+  if(!ws.length) return items;
+  const nms = items.map(it => [it, normalize(it.name)]);
+  const strict = nms.filter(([it, nm]) => ws.every(w => has(nm, w))).map(x => x[0]);
+  if(strict.length >= 3 || ws.length === 1) return strict;
+  const head = ws[0], others = ws.slice(1);
+  const close = nms.filter(([it, nm]) => has(nm, head) && others.some(w => has(nm, w))).map(x => x[0]);
+  if(close.length >= 3) return close;
+  if(strict.length) return strict;
+  return allowHeadOnly ? nms.filter(([it, nm]) => has(nm, head)).map(x => x[0]) : [];
 }
 function renderShoppingList(){
   const box = document.getElementById('shoppingListBox');
@@ -1946,6 +1964,33 @@ function render(){
       costcoHtml = `<div class="costco-note">🛒 Costco (${product.costco.note}) : env. ${product.costco.price} $/${ownUnitLabel} — ton prix est ${verdict}</div>`;
     }
 
+    // 💡 Meilleurs prix ailleurs : les magasins qui vendent moins cher que ton prix (même unité)
+    let betterHtml = '';
+    try {
+      const wantUnit = unit === 'egg' ? 'egg' : (unit === 'un' ? 'un' : 'kg');
+      const todayIso = new Date().toISOString().slice(0, 10);
+      let pool = allFoundFull.filter(it => primaryFlags.get(it));
+      if(!pool.length) pool = allFoundFull;
+      pool = pool.filter(it => it.unit === wantUnit && it.price > 0 && !isFutureItem(it, todayIso));
+      pool = familyItems(searchTerm, pool, false);
+      const byStore = new Map();
+      pool.forEach(it => { const st = splitStoreFromName(it.name, it.store).store; const cur = byStore.get(st); if(!cur || it.price < cur.price) byStore.set(st, it); });
+      const lower = [...byStore.entries()].filter(([st, it]) => it.price < ppk * 0.97).sort((a, b) => a[1].price - b[1].price);
+      const fmt2 = n => (Math.round(n * 100) / 100).toFixed(2).replace('.', ',');
+      const esc = t => String(t).replace(/[<>&"]/g, '');
+      if(pool.length && !lower.length){
+        betterHtml = `<div class="better-prices" style="margin-top:10px;font-weight:700;color:#1b6b2a">✓ Aucun prix nettement plus bas (3 % et plus) trouvé dans les ${byStore.size} magasin(s) comparé(s) : ton prix est le meilleur.</div>`;
+      } else if(lower.length){
+        const rows = lower.slice(0, 6).map(([st, it]) => {
+          const pct = Math.round((1 - it.price / ppk) * 100);
+          const total = (ppk - it.price) * kg;
+          const nm = esc(splitStoreFromName(it.name, it.store).displayName || it.name).slice(0, 48);
+          return `<li><b>${esc(st)}</b> : ${fmt2(it.price)} $/${ownUnitLabel} <span style="color:#1b6b2a">(−${pct} %, ~${fmt2(total)} $ de moins pour ta quantité)</span><br><span style="font-size:.8em;color:var(--ink-soft)">${nm}</span></li>`;
+        }).join('');
+        betterHtml = `<div class="better-prices" style="margin-top:10px"><div style="font-weight:700;color:#a33">💡 Tu as un meilleur prix ailleurs :</div><ul style="margin:4px 0 0 18px;padding:0">${rows}</ul></div>`;
+      }
+    } catch(e) {}
+
     ownPriceHtml = `
       <div class="own-price-block">
         <div class="own-price-label">Ton prix (${price.toFixed(2)} $ pour ${qty} ${unit === 'egg' ? 'œufs' : (unit === 'un' ? 'unité(s)' : unit)}) :</div>
@@ -1953,6 +1998,7 @@ function render(){
         ${(unit === 'egg' || unit === 'un') ? '' : `<div class="pplb">${pplbDisplay} $ / lb</div>`}
         ${stampHtml}
         ${costcoHtml}
+        ${betterHtml}
       </div>`;
   }
 
@@ -2304,6 +2350,7 @@ function parseOCR(raw){
       if(r.price != null) bits.push(fmt(r.price) + ' $' + (r.multi ? ' (lot de ' + r.multi + ')' : ''));
       if(r.qty != null) bits.push(fmt(r.qty) + ' ' + r.unit);
       setStatus('✓ Lu : ' + bits.join(' · ') + ' — vérifie les champs ci-dessous.');
+      if(window.__updatePpkLive) window.__updatePpkLive();
       // Verdict tout de suite, à côté de la lecture
       try {
         const sp = selectedProduct;
@@ -2319,13 +2366,15 @@ function parseOCR(raw){
         // Pas de repère : on compare au prix au kg des spéciaux trouvés (circulaires + Costco)
         try {
           const kgPrice = r.price / toKg(r.qty, unitSel.value);
-          const found = findKnownPrices(r.name, 60, '').filter(it => it.unit === 'kg' && it.price > 0 && regionOk(it));
+          let famLabel = '';
+          let found = familyItems(r.name, findKnownPrices(r.name, 200, '').filter(it => it.unit === 'kg' && it.price > 0 && regionOk(it)), true);
+          famLabel = r.name + ' et variantes';
           if(r.price > 0 && r.qty > 0 && found.length){
             const lower = found.filter(it => it.price < kgPrice).length;
             const best = found.reduce((a, b2) => b2.price < a.price ? b2 : a);
             const bs = splitStoreFromName(best.name, best.store).store;
             const verdict = lower === 0 ? '✓ MOINS CHER que tous les prix trouvés' : (lower <= found.length * 0.25 ? 'plutôt bon (parmi les moins chers)' : (lower >= found.length * 0.75 ? 'plutôt cher' : 'dans la moyenne'));
-            setStatus(st.textContent + ' → ' + fmt(kgPrice) + ' $/kg : ' + verdict + ' — ' + lower + ' des ' + found.length + ' prix trouvés sont plus bas (le plus bas : ' + fmt(best.price) + ' $/kg chez ' + bs + ').');
+            setStatus(st.textContent + ' → ' + fmt(kgPrice) + ' $/kg : ' + verdict + ' — comparé à ' + found.length + ' produits similaires (' + famLabel + ') : ' + (lower === 0 ? 'aucun n\u2019est moins cher' : (lower === 1 ? '1 est moins cher' : lower + ' sont moins chers')) + ' ; le moins cher : ' + fmt(best.price) + ' $/kg chez ' + bs + '.');
             st.style.color = lower === 0 ? '#1b6b2a' : (lower >= found.length * 0.75 ? '#a33' : 'inherit');
           } else {
             setStatus(st.textContent + ' (pas de repère de prix pour ce produit : compare avec les prix trouvés plus bas)');
@@ -2345,6 +2394,23 @@ function parseOCR(raw){
     const items = (e.clipboardData && e.clipboardData.files) || [];
     for(const f of items){ if(/^image\//.test(f.type)){ e.preventDefault(); readImage(f); break; } }
   });
+})();
+
+
+// Prix de revient au kilo (ou à la douzaine / à l'unité) affiché en direct sous les champs
+(function initPpkLive(){
+  const box = document.getElementById('ppkLive');
+  function upd(){
+    const price = parseFloat(priceInput.value), qty = parseFloat(qtyInput.value), unit = unitSel.value;
+    if(!(price > 0 && qty > 0)){ box.textContent = ''; return; }
+    const ppk = price / toKg(qty, unit);
+    const lab = unit === 'egg' ? 'douzaine' : (unit === 'un' ? 'unité' : 'kg');
+    const f = n => (Math.round(n * 100) / 100).toFixed(2).replace('.', ',');
+    box.textContent = '= ' + f(ppk) + ' $/' + lab + (lab === 'kg' ? '  (' + f(ppk * 0.453592) + ' $/lb)' : '');
+  }
+  [priceInput, qtyInput, unitSel].forEach(el => { el.addEventListener('input', upd); el.addEventListener('change', upd); });
+  upd();
+  window.__updatePpkLive = upd;
 })();
 
 // Bulle "🛒 Ma liste"
