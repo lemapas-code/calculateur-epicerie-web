@@ -860,7 +860,7 @@
     </div>
   </div>
 
-  <div class="build-tag">Version du calculateur : 2026-11-01 19:50</div>
+  <div class="build-tag">Version du calculateur : 2026-11-01 20:10</div>
 
 </div>
 
@@ -1912,10 +1912,36 @@ function render(){
   const known = showAllKnown ? allKnown : allKnown.slice(0, 10);
   const other = showAllOther ? allOther : allOther.slice(0, 10);
   const moreBtnHtml = (id, shown, total) => total > 10 ? `<button type="button" id="${id}" style="margin:8px 0;padding:6px 12px;border:1px solid var(--forest);background:#fff;color:var(--forest);border-radius:8px;cursor:pointer;">${shown ? 'Voir moins' : 'Voir plus (' + (total - 10) + ' autres)'}</button>` : '';
+  // 💡 Quand on a choisi un magasin (pastille) : où trouve-t-on moins cher qu'ici ? (prix comparables au kg / L)
+  let elsewhereHtml = '';
+  try {
+    const hasOwn = parseFloat(priceInput.value) > 0 && parseFloat(qtyInput.value) > 0;
+    if(resultStore && !hasOwn){
+      const todayIso2 = new Date().toISOString().slice(0, 10);
+      let pool2 = allFoundFull.filter(it => primaryFlags.get(it) && !isFutureItem(it, todayIso2));
+      if(!pool2.length) pool2 = allFoundFull.filter(it => !isFutureItem(it, todayIso2));
+      pool2 = familyItems(searchTerm, pool2, false);
+      const bestBy = new Map();   // magasin -> {it, v, base}
+      pool2.forEach(it => { const c = comparableUnitPrice(it); if(!c) return; const st = splitStoreFromName(it.name, it.store).store; const cur = bestBy.get(st); if(!cur || c.v < cur.v) bestBy.set(st, { it, v: c.v, base: c.base }); });
+      const ref = bestBy.get(resultStore);
+      const f2 = n => (Math.round(n * 100) / 100).toFixed(2).replace('.', ',');
+      const e2 = t => String(t).replace(/[<>&"]/g, '');
+      if(ref){
+        const lower2 = [...bestBy.entries()].filter(([st, x]) => st !== resultStore && x.base === ref.base && x.v < ref.v * 0.97).sort((a, b) => a[1].v - b[1].v);
+        const head = `chez ${e2(resultStore)} : ${f2(ref.v)} $/${ref.base}`;
+        if(lower2.length){
+          elsewhereHtml = `<div class="better-prices" style="margin:6px 0 12px"><div style="font-weight:700;color:#a33">💡 Meilleur prix ailleurs (${head}) :</div><ul style="margin:4px 0 0 18px;padding:0">` +
+            lower2.slice(0, 6).map(([st, x]) => `<li><b>${e2(st)}</b> : ${f2(x.v)} $/${x.base} <span style="color:#1b6b2a">(−${Math.round((1 - x.v / ref.v) * 100)} %)</span><br><span style="font-size:.8em;color:var(--ink-soft)">${e2(splitStoreFromName(x.it.name, x.it.store).displayName || x.it.name).slice(0, 55)}</span></li>`).join('') + `</ul></div>`;
+        } else if(bestBy.size > 1){
+          elsewhereHtml = `<div class="better-prices" style="margin:6px 0 12px;font-weight:700;color:#1b6b2a">✓ ${head} : aucun magasin comparé n'est nettement moins cher.</div>`;
+        }
+      }
+    }
+  } catch(e) {}
   let knownHtml = '';
   if(known.length){
     const mayrandNote = mayrandHidden ? `<div class="empty-note" style="margin:0 0 10px;font-weight:700;font-size:1.1rem;line-height:1.35">🏬 ${mayrandHidden} résultat${mayrandHidden > 1 ? 's' : ''} Mayrand masqué${mayrandHidden > 1 ? 's' : ''} — appuie sur la pastille « Mayrand » pour voir les deals de cette bannière.</div>` : '';
-    knownHtml = storePillsHtml + mayrandNote + `<div class="found-list-label">Prix trouvés (Costco + circulaires) :</div><div class="found-list">` +
+    knownHtml = storePillsHtml + elsewhereHtml + mayrandNote + `<div class="found-list-label">Prix trouvés (Costco + circulaires) :</div><div class="found-list">` +
       known.map(it => priceItemHTML(it, bestSet)).join('') + `</div>` + moreBtnHtml('knownMoreBtn', showAllKnown, allKnown.length);
     if(allOther.length){
       const safeTerm = String(searchTerm).replace(/[<>&"]/g, '');
