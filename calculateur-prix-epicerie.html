@@ -872,7 +872,7 @@
     </div>
   </div>
 
-  <div class="build-tag">Version du calculateur : 2026-11-06 15:46</div>
+  <div class="build-tag">Version du calculateur : 2026-11-07 07:57</div>
 
 </div>
 
@@ -1523,10 +1523,17 @@ function findKnownPrices(name, limit, storeK){
       });
       if(!anyHead) continue;
     }
-    if(matchCount > 0){ scored.push({ item: d, matchCount, missQual: wordRes.some((re, wi) => QUERY_QUALIFIERS.has(queryWords[wi]) && !re.test(n)) }); primaryFlags.set(d, isPrimaryMatch(d, wordRes, queryWords)); }
+    if(matchCount > 0){ scored.push({ item: d, matchCount, cutMatch: wordRes.some((re, wi) => PRIMARY_CUTS.has(queryWords[wi]) && re.test(n)), missQual: wordRes.some((re, wi) => QUERY_QUALIFIERS.has(queryWords[wi]) && !re.test(n)) }); primaryFlags.set(d, isPrimaryMatch(d, wordRes, queryWords)); }
   }
   // « poulet entier » : si des items contiennent AUSSI le qualificatif (entier, frais, moulu…), on écarte ceux qui ne l'ont pas (ailes, simili…).
   if(hasStrongWord && scored.some(x => !x.missQual) && scored.some(x => x.missQual)){ for(let k = scored.length - 1; k >= 0; k--){ if(scored[k].missQual) scored.splice(k, 1); } }
+  // « cuisses de poulet », « poitrine de dinde » : la coupe fait partie du produit — on écarte le poulet entier, les ailes, etc.
+  // Et si des items contiennent TOUS les mots de la recherche, on ne garde que ceux-là.
+  if(queryWords.length >= 2 && queryWords.some(w => PRIMARY_CUTS.has(w)) && scored.some(x => x.cutMatch)){
+    for(let k = scored.length - 1; k >= 0; k--){ if(!scored[k].cutMatch) scored.splice(k, 1); }
+    const full = queryWords.length;
+    if(scored.some(x => x.matchCount >= full)){ for(let k = scored.length - 1; k >= 0; k--){ if(scored[k].matchCount < full) scored.splice(k, 1); } }
+  }
   const isDeal = it => (it.realDeal && it.avgPrice !== undefined) || (it.medianPrice !== undefined && ['exceptional','very_good','good'].includes(it.dealLevel)) ? 1 : 0;
   scored.sort((a, b) => b.matchCount - a.matchCount || isDeal(b.item) - isDeal(a.item) || a.item.price - b.item.price);
   return scored.map(s => s.item).slice(0, limit || 5);
