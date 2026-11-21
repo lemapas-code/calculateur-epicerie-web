@@ -780,6 +780,7 @@
     <div class="found-list" id="merchantList"></div>
     <div class="empty-note" id="merchantEmpty" style="display:none">Rien à afficher pour ce marchand et cette période.</div>
     <button type="button" id="merchantMore" class="deal-tab" style="display:none;margin-top:8px">Voir plus</button>
+    <div id="merchantFakeBox" style="display:none;margin-top:14px"></div>
   </details></section>
 
   <section class="weekly-deals coupons-section"><details id="couponsDetails">
@@ -877,7 +878,7 @@
     </div>
   </div>
 
-  <div class="build-tag">Version du calculateur : 2026-11-21 09:49</div>
+  <div class="build-tag">Version du calculateur : 2026-11-21 10:11</div>
 
 </div>
 
@@ -2671,7 +2672,7 @@ function renderMerchantDeals(){
   document.querySelectorAll('#merchantPills .category-pill').forEach(b => b.onclick = () => { merchantSel = b.dataset.store; merchantLimit = MERCHANT_STEP; renderMerchantDeals(); });
 
   const list = document.getElementById('merchantList'), empty = document.getElementById('merchantEmpty'), more = document.getElementById('merchantMore'), label = document.getElementById('merchantLabel');
-  if(!merchantSel){ list.innerHTML = ''; label.textContent = ''; empty.style.display = 'block'; more.style.display = 'none'; return; }
+  if(!merchantSel){ const fb0 = document.getElementById('merchantFakeBox'); if(fb0) fb0.style.display = 'none'; list.innerHTML = ''; label.textContent = ''; empty.style.display = 'block'; more.style.display = 'none'; return; }
   const e = byStore.get(merchantSel);
   const byScore = (a, b) => merchantDealScore(b) - merchantDealScore(a) || a.price - b.price;
   const verified = e.real.slice().sort(byScore), claims = e.claim.slice().sort((a, b) => b.economyPct - a.economyPct || a.price - b.price);
@@ -2686,6 +2687,13 @@ function renderMerchantDeals(){
   list.innerHTML = items.slice(0, merchantLimit).map(it => priceItemHTML(it)).join('');
   more.style.display = items.length > merchantLimit ? 'inline-block' : 'none';
   more.textContent = `Voir plus (${items.length - merchantLimit} autres)`;
+  // Fausses promos du marchand choisi : toujours visibles sous la liste (sans changer d'onglet)
+  const fb = document.getElementById('merchantFakeBox');
+  if(!merchantFake && fakes.length){
+    fb.style.display = 'block';
+    fb.innerHTML = `<div class="found-list-label" style="color:#a4262c">🚩 ${merchantSel} — ${fakes.length} fausse${fakes.length > 1 ? 's' : ''} promo${fakes.length > 1 ? 's' : ''} à éviter</div><div class="found-list">${fakes.slice(0, 15).map(it => priceItemHTML(it)).join('')}</div>` +
+      (fakes.length > 15 ? `<div class="empty-note" style="margin-top:6px">… et ${fakes.length - 15} autres : onglet « 🚩 Fausses promos ».</div>` : '');
+  } else { fb.style.display = 'none'; fb.innerHTML = ''; }
 }
 function setMerchantMode(mode){
   merchantReal = mode === 'real'; merchantFake = mode === 'fake'; merchantLimit = MERCHANT_STEP;
