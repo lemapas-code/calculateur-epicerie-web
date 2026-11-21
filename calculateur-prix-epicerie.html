@@ -365,6 +365,10 @@
   }
   .help-btn:hover{background:var(--forest);color:#fff;}
   .fake-promo-badge{display:block;font-size:11.5px;font-weight:700;color:#a4262c;background:#fde7e9;border-radius:8px;padding:3px 8px;margin:3px 0;}
+  .found-list .item:has(.fake-promo-badge), .found-list .item:has(.claim-badge){flex-wrap:wrap;}
+  .found-list .item .fake-promo-badge, .found-list .item .claim-badge{order:5;flex:1 1 100%;box-sizing:border-box;margin:2px 0 0;}
+  #fakeOverlay .help-card{max-width:760px;}
+  .found-list .item:has(.fake-promo-badge) .item-name, .found-list .item:has(.claim-badge) .item-name{white-space:normal;flex:1 1 150px;overflow:visible;}
   .claim-badge{display:block;font-size:11.5px;font-weight:700;color:#1d4f91;background:#e3eefb;border-radius:8px;padding:3px 8px;margin:3px 0;}
   .fake-promo-badge.inflated{color:#8a5a00;background:#fff4ce;}
   .list-btn{
@@ -770,7 +774,7 @@
   <section class="weekly-deals merchant-deals"><details id="merchantDetails">
     <summary class="weekly-title" style="cursor:pointer;list-style:none">🏪 Deals par marchand <span style="font-size:.7em;font-weight:400">(toucher pour ouvrir/fermer)</span></summary>
     <div class="category-pills" id="merchantPills"></div>
-    <div class="deal-tabs"><button id="mTabReal" class="deal-tab active" type="button">✓ Vrais deals</button><button id="mTabAll" class="deal-tab" type="button">🏷️ Tous les spéciaux</button></div>
+    <div class="deal-tabs"><button id="mTabReal" class="deal-tab active" type="button">✓ Vrais deals</button><button id="mTabAll" class="deal-tab" type="button">🏷️ Tous les spéciaux</button><button id="mTabFake" class="deal-tab" type="button">🚩 Fausses promos</button></div>
     <div class="deal-tabs"><button id="mTabCurrent" class="deal-tab active" type="button">Présent</button><button id="mTabFuture" class="deal-tab" type="button">À venir</button></div>
     <div class="found-list-label" id="merchantLabel"></div>
     <div class="found-list" id="merchantList"></div>
@@ -873,7 +877,7 @@
     </div>
   </div>
 
-  <div class="build-tag">Version du calculateur : 2026-11-21 09:29</div>
+  <div class="build-tag">Version du calculateur : 2026-11-21 09:49</div>
 
 </div>
 
@@ -2598,6 +2602,7 @@ renderWeeklyDeals(false);
 // "Vrai deal" = mêmes critères que le badge ✓ VRAI DEAL (historique réel).
 // "Spécial" = item de circulaire (dates de validité) ou avec un rabais affiché.
 const MERCHANT_STEP = (window.innerWidth < 700) ? 10 : 40;
+let merchantFake = false;
 let merchantSel = null, merchantReal = true, merchantFuture = false, merchantLimit = MERCHANT_STEP;
 try { if(window.innerWidth < 700) document.getElementById('merchantDetails').open = false; } catch(e) {}
 function isBigClaim(d){   // gros rabais annoncé, pas encore vérifiable (pas d'historique)
@@ -2636,8 +2641,8 @@ function renderMerchantDeals(){
     if(isFutureItem(d, today) !== merchantFuture) return;
     const { store, displayName } = splitStoreFromName(d.name, d.store);
     const real = isRealDealItem(d), special = isSpecialItem(d);
-    const claim = !real && isBigClaim(d);
-    if(!real && !special) return;
+    const claim = !real && isBigClaim(d), fake = !!promoCheck(d);
+    if(!real && !special && !fake) return;
     // Doublons : même magasin, même prix, même unité et même début de nom (« Bifteck français » = « BIFTECK FRANÇAIS OU CUBES… »),
     // souvent le même spécial vu par deux sources (circulaire + Economilk). On garde la version la plus riche.
     const head = normalize(displayName).split(/ ou | \/ |,|\(/)[0].replace(/\s+/g, ' ').trim();
@@ -2648,21 +2653,21 @@ function renderMerchantDeals(){
     if(dup){
       // Le « vrai deal » (basé sur l'historique) gagne toujours ; sinon on garde la version la plus riche.
       if(real && !dup.real || (real === dup.real && rich(d) > rich(dup.d))){ dup.d = d; }
-      dup.real = dup.real || real; dup.claim = dup.claim || claim;
+      dup.real = dup.real || real; dup.claim = dup.claim || claim; dup.fake = dup.fake || fake;
       if(head.length < dup.head.length) dup.head = head;
       return;
     }
-    g.push({ head, d, real, claim, store });
+    g.push({ head, d, real, claim, fake, store });
   });
   groups.forEach(g => g.forEach(x => {
-    if(!byStore.has(x.store)) byStore.set(x.store, { real: [], claim: [], all: [] });
+    if(!byStore.has(x.store)) byStore.set(x.store, { real: [], claim: [], fake: [], all: [] });
     const e = byStore.get(x.store);
-    e.all.push(x.d); if(x.real) e.real.push(x.d); else if(x.claim && x.store !== 'Mayrand') e.claim.push(x.d);
+    e.all.push(x.d); if(x.fake) e.fake.push(x.d); if(x.real) e.real.push(x.d); else if(x.claim && x.store !== 'Mayrand') e.claim.push(x.d);
   }));
-  const stores = [...byStore.keys()].sort((a, b) => byStore.get(b).real.length - byStore.get(a).real.length || byStore.get(b).all.length - byStore.get(a).all.length || a.localeCompare(b));
-  if(!merchantSel || !byStore.has(merchantSel)) merchantSel = stores[0] || null;
+  const stores = [...byStore.keys()].filter(st => !merchantFake || byStore.get(st).fake.length).sort(merchantFake ? (a, b) => byStore.get(b).fake.length - byStore.get(a).fake.length || a.localeCompare(b) : (a, b) => byStore.get(b).real.length - byStore.get(a).real.length || byStore.get(b).all.length - byStore.get(a).all.length || a.localeCompare(b));
+  if(!merchantSel || !stores.includes(merchantSel)) merchantSel = stores[0] || null;
   document.getElementById('merchantPills').innerHTML = stores.map(st =>
-    `<button type="button" class="category-pill${st === merchantSel ? ' active' : ''}" data-store="${st.replace(/"/g,'&quot;')}">${st} (${byStore.get(st).real.length}${byStore.get(st).claim.length ? '+' + byStore.get(st).claim.length : ''}/${byStore.get(st).all.length})</button>`).join('');
+    `<button type="button" class="category-pill${st === merchantSel ? ' active' : ''}" data-store="${st.replace(/"/g,'&quot;')}">${st} (${merchantFake ? byStore.get(st).fake.length : byStore.get(st).real.length + (byStore.get(st).claim.length ? '+' + byStore.get(st).claim.length : '') + '/' + byStore.get(st).all.length})</button>`).join('');
   document.querySelectorAll('#merchantPills .category-pill').forEach(b => b.onclick = () => { merchantSel = b.dataset.store; merchantLimit = MERCHANT_STEP; renderMerchantDeals(); });
 
   const list = document.getElementById('merchantList'), empty = document.getElementById('merchantEmpty'), more = document.getElementById('merchantMore'), label = document.getElementById('merchantLabel');
@@ -2670,8 +2675,11 @@ function renderMerchantDeals(){
   const e = byStore.get(merchantSel);
   const byScore = (a, b) => merchantDealScore(b) - merchantDealScore(a) || a.price - b.price;
   const verified = e.real.slice().sort(byScore), claims = e.claim.slice().sort((a, b) => b.economyPct - a.economyPct || a.price - b.price);
-  const items = merchantReal ? verified.concat(claims) : e.all.slice().sort(byScore);
-  label.textContent = merchantReal
+  const fakes = e.fake.slice().sort((a, b) => promoCheck(b).gap - promoCheck(a).gap || a.price - b.price);
+  const items = merchantFake ? fakes : (merchantReal ? verified.concat(claims) : e.all.slice().sort(byScore));
+  label.textContent = merchantFake
+    ? `${merchantSel} — fausses promos : ${items.length}  (rabais annoncé qui ne tient pas face à l'historique ou à tes repères)`
+    : merchantReal
     ? `${merchantSel} — vrais deals vérifiés : ${verified.length}` + (claims.length ? `, puis ${claims.length} gros rabais annoncés (🏷 non vérifiés)` : '') + `  (pastille : vérifiés + annoncés / spéciaux)`
     : `${merchantSel} — tous les spéciaux : ${items.length}  (pastille : vérifiés + annoncés / spéciaux)`;
   empty.style.display = items.length ? 'none' : 'block';
@@ -2679,12 +2687,20 @@ function renderMerchantDeals(){
   more.style.display = items.length > merchantLimit ? 'inline-block' : 'none';
   more.textContent = `Voir plus (${items.length - merchantLimit} autres)`;
 }
+function setMerchantMode(mode){
+  merchantReal = mode === 'real'; merchantFake = mode === 'fake'; merchantLimit = MERCHANT_STEP;
+  document.getElementById('mTabReal').classList.toggle('active', mode === 'real');
+  document.getElementById('mTabAll').classList.toggle('active', mode === 'all');
+  document.getElementById('mTabFake').classList.toggle('active', mode === 'fake');
+  renderMerchantDeals();
+}
 function setMerchantTab(a, b, firstActive){
   document.getElementById(a).classList.toggle('active', firstActive);
   document.getElementById(b).classList.toggle('active', !firstActive);
 }
-document.getElementById('mTabReal').onclick = () => { merchantReal = true; merchantLimit = MERCHANT_STEP; setMerchantTab('mTabReal','mTabAll',true); renderMerchantDeals(); };
-document.getElementById('mTabAll').onclick = () => { merchantReal = false; merchantLimit = MERCHANT_STEP; setMerchantTab('mTabReal','mTabAll',false); renderMerchantDeals(); };
+document.getElementById('mTabReal').onclick = () => setMerchantMode('real');
+document.getElementById('mTabAll').onclick = () => setMerchantMode('all');
+document.getElementById('mTabFake').onclick = () => setMerchantMode('fake');
 document.getElementById('mTabCurrent').onclick = () => { merchantFuture = false; merchantLimit = MERCHANT_STEP; setMerchantTab('mTabCurrent','mTabFuture',true); renderMerchantDeals(); };
 document.getElementById('mTabFuture').onclick = () => { merchantFuture = true; merchantLimit = MERCHANT_STEP; setMerchantTab('mTabCurrent','mTabFuture',false); renderMerchantDeals(); };
 document.getElementById('merchantMore').onclick = () => { merchantLimit += MERCHANT_STEP; renderMerchantDeals(); };
